@@ -42,18 +42,27 @@ pub struct Register{
 }
 
 pub enum AddressingMode {
-    /// 立即数寻址
+    /// 立即数寻址(操作码，操作数)
     Immediate,
-    /// 零页寻址
+    /// 零页寻址(操作码，零页地址(零页即0x00~0xFF))
     ZeroPage,
-    /// 零页X
+    /// 零页X寻址(操作码，零页基地址)
     ZeroPageX,
+    /// 零页Y寻址(操作码，零页基地址)
     ZeroPageY,
+    /// 绝对寻址(操作码，操作数地址低字节，操作数地址高字节)
     Absolute,
+    /// 绝对X寻址(操作码，基地址低字节，基地址高字节)
     AbsoluteX,
+    /// 绝对Y寻址(操作码，基地址低字节，基地址高字节)
     AbsoluteY,
+    /// X间接寻址(操作码，零页基地址)
+    /// *(X+base) | *(X+base+1) << 8
     IndirectX,
+    /// Y间接寻址(操作码，零页间接地址)
+    /// *(base) | *(base+1) << 8 + Y
     IndirectY,
+    /// 无效寻址
     NoneAddressing,
 }
 
