@@ -4,9 +4,9 @@ use crate::status::StatusFlagRegister;
 use crate::AddressingMode::{ZeroPage, ZeroPageX};
 
 mod bus;
+mod memory;
 mod register;
 mod status;
-
 #[derive(Debug)]
 pub enum AddressingMode {
     /// 立即数寻址(操作码，操作数)
@@ -134,99 +134,112 @@ impl CPU {
         *register_ref = data;
         self.update_zero_and_negative_flags(*register_ref);
     }
-    fn ldx(&mut self, mode: &AddressingMode) {
-        self.load_register(&mut self.register.x, mode);
-    }
-    fn ldy(&mut self, mode: &AddressingMode) {
-        self.load_register(&mut self.register.y, mode);
-    }
+    /// LDA--由存储器取数送入累加器 M→A
     fn lda(&mut self, mode: &AddressingMode) {
         self.load_register(&mut self.register.a, mode);
     }
+    /// LDX--由存储器取数送入累加器 M→X
+    fn ldx(&mut self, mode: &AddressingMode) {
+        self.load_register(&mut self.register.x, mode);
+    }
+    /// LDY--由存储器取数送入累加器 M→Y
+    fn ldy(&mut self, mode: &AddressingMode) {
+        self.load_register(&mut self.register.y, mode);
+    }
+    /// STA--将累加器的内容送入存储器 A--M
     fn sta(&mut self, mode: &AddressingMode) {
         let addr = self.get_operand_address(mode);
         self.write(addr, self.register.a);
     }
-    fn stx() {}
-    fn sty() {}
-    fn tax() {}
-    fn txa() {}
-    fn tay() {}
-    fn tya() {}
-    fn txs() {}
-    fn tsx() {}
+    /// STX--将寄存器X的内容送入存储器 X--M
+    fn stx(&mut self) {
+        let addr = self.get_operand_address(mode);
+        self.write(addr, self.register.a);
+    }
+    /// STY--将寄存器Y的内容送入存储器 Y--M
+    fn sty(&mut self) {
+        let addr = self.get_operand_address(mode);
+        self.write(addr, self.register.a);
+    }
+
+    fn tax(&mut self) {}
+    fn txa(&mut self) {}
+    fn tay(&mut self) {}
+    fn tya(&mut self) {}
+    fn txs(&mut self) {}
+    fn tsx(&mut self) {}
 }
 
 /// 算术运算指令实现
 impl CPU {
-    fn adc() {}
-    fn sbc() {}
-    fn inc() {}
-    fn dec() {}
-    fn inx() {}
-    fn dex() {}
-    fn iny() {}
-    fn dey() {}
+    fn adc(&mut self) {}
+    fn sbc(&mut self) {}
+    fn inc(&mut self) {}
+    fn dec(&mut self) {}
+    fn inx(&mut self) {}
+    fn dex(&mut self) {}
+    fn iny(&mut self) {}
+    fn dey(&mut self) {}
 }
 
 /// 逻辑运算指令实现
 impl CPU {
-    fn and() {}
-    fn ora() {}
-    fn eor() {}
+    fn and(&mut self) {}
+    fn ora(&mut self) {}
+    fn eor(&mut self) {}
 }
 
 /// 置标志位指令实现
 impl CPU {
-    fn clc() {}
-    fn sec() {}
-    fn cld() {}
-    fn sed() {}
-    fn clv() {}
-    fn cli() {}
-    fn sei() {}
+    fn clc(&mut self) {}
+    fn sec(&mut self) {}
+    fn cld(&mut self) {}
+    fn sed(&mut self) {}
+    fn clv(&mut self) {}
+    fn cli(&mut self) {}
+    fn sei(&mut self) {}
 }
 
 /// 比较指令实现
 impl CPU {
-    fn cmp() {}
-    fn cpx() {}
-    fn cpy() {}
-    fn bit() {}
+    fn cmp(&mut self) {}
+    fn cpx(&mut self) {}
+    fn cpy(&mut self) {}
+    fn bit(&mut self) {}
 }
 
 /// 移位指令
 impl CPU {
-    fn asl() {}
-    fn lsr() {}
-    fn rol() {}
-    fn ror() {}
+    fn asl(&mut self) {}
+    fn lsr(&mut self) {}
+    fn rol(&mut self) {}
+    fn ror(&mut self) {}
 }
 
 /// 堆栈指令
 impl CPU {
-    fn pha() {}
-    fn pla() {}
-    fn php() {}
-    fn plp() {}
+    fn pha(&mut self) {}
+    fn pla(&mut self) {}
+    fn php(&mut self) {}
+    fn plp(&mut self) {}
 }
 
 /// 跳转指令
 impl CPU {
-    fn jmp() {}
-    fn beq() {}
-    fn bne() {}
-    fn bcs() {}
-    fn bcc() {}
-    fn bmi() {}
-    fn bpl() {}
-    fn bvs() {}
-    fn bvc() {}
+    fn jmp(&mut self) {}
+    fn beq(&mut self) {}
+    fn bne(&mut self) {}
+    fn bcs(&mut self) {}
+    fn bcc(&mut self) {}
+    fn bmi(&mut self) {}
+    fn bpl(&mut self) {}
+    fn bvs(&mut self) {}
+    fn bvc(&mut self) {}
 }
 
 /// 中断指令
 impl CPU {
-    fn int() {}
+    fn int(&mut self) {}
 }
 
 fn main() {
