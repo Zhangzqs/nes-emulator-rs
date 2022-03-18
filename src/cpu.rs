@@ -1,3 +1,8 @@
+use crate::bus::Addressable;
+use crate::register::Register;
+use crate::status::StatusFlagRegister;
+use crate::AddressingMode::{ZeroPage, ZeroPageX};
+
 #[derive(Debug)]
 pub enum AddressingMode {
     /// 立即数寻址(操作码，操作数)
@@ -27,6 +32,19 @@ pub enum AddressingMode {
 pub struct CPU {
     pub register: Register,
     pub bus: Box<dyn Addressable>,
+}
+
+/// 两字节打包成u16
+fn pack_u16(high: u8, low: u8) -> u16 {
+    let high = high as u16;
+    let low = low as u16;
+    (high << 8) | low
+}
+/// 解构u16(high,low)
+fn unpack_u16(val: u16) -> (u8, u8) {
+    let low = (val & 0xff) as u8;
+    let high = (val >> 8) as u8;
+    (high, low)
 }
 
 /// 读写总线的便捷方法
@@ -365,6 +383,31 @@ impl CPU {
     }
 }
 
+/// 堆栈控制函数
+/// 栈的push内存地址由高到低
+/// 栈的pop内存地址由低到高
+const STACK_START: u16 = 0x0100;
+impl CPU {
+    fn stack_pop(&mut self) -> u8 {
+        self.register.sp = self.register.sp.wrapping_add(1);
+        self.read(STACK_START + self.register.sp)
+    }
+    fn stack_push(&mut self, data: u8) {
+        self.write(STACK_START + self.register.sp, data);
+        self.register.sp = self.register.sp.wrapping_sub(1)
+    }
+    fn stack_pop_u16(&mut self) -> u16 {
+        let low = self.stack_pop();
+        let high = self.stack_pop();
+        pack_u16(high, low)
+    }
+    fn stack_push_u16(&mut self, data: u16) {
+        let (high, low) = unpack_u16(data);
+        self.stack_push(high);
+        self.stack_push(low);
+    }
+}
+
 /// 堆栈指令
 impl CPU {
     fn pha(&mut self) {}
@@ -372,10 +415,6 @@ impl CPU {
     fn php(&mut self) {}
     fn plp(&mut self) {}
 }
-use crate::bus::Addressable;
-use crate::register::Register;
-use crate::status::StatusFlagRegister;
-use crate::AddressingMode::{ZeroPage, ZeroPageX};
 
 /// 跳转指令
 impl CPU {
