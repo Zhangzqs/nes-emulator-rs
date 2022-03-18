@@ -588,6 +588,16 @@ impl CPU {
     fn bvc(&mut self) {
         self.branch(!self.register.status.overflow)
     }
+    /// 转移到子程序指令JSR(绝对寻址)
+    fn jsr(&mut self) {
+        self.stack_push_u16(self.register.pc + 2 - 1);
+        let jump_addr = self.read_u16(self.register.pc);
+        self.register.pc = jump_addr;
+    }
+    /// 从主程序返回指令RTS(隐含寻址)
+    fn rts(&mut self) {
+        self.register.pc = self.stack_pop_u16() + 1;
+    }
 }
 
 /// 中断指令
