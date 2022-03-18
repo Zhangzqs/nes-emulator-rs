@@ -2,7 +2,6 @@ use crate::bus::Addressable;
 use crate::register::Register;
 use crate::status::StatusFlagRegister;
 use crate::AddressingMode::{ZeroPage, ZeroPageX};
-use std::ops::Add;
 
 mod bus;
 mod register;
@@ -39,15 +38,31 @@ pub struct CPU {
     pub bus: Box<dyn Addressable>,
 }
 
+/// 读写总线的便捷方法
 impl CPU {
-    /// 获取当前的操作数地址
+    fn read(&self, addr: u16) -> u8 {
+        self.bus.read(addr)
+    }
+    fn read_u16(&self, addr: u16) -> u16 {
+        self.bus.read_u16(addr)
+    }
+    fn write(&self, addr: u16, data: u8) {
+        self.bus.write(addr, data);
+    }
+    fn write_u16(&self, addr: u16, data: u16) {
+        self.bus.write_u16(addr, data);
+    }
+}
+
+impl CPU {
+    /// 获取当前的操作数的地址
     fn get_operand_address(&self, mode: &AddressingMode) -> u16 {
         let pc = self.register.pc;
         let x = self.register.x;
         let y = self.register.y;
+        let read = self.read;
+        let read_u16 = self.read_u16;
 
-        let read = |addr: u16| self.bus.read(addr);
-        let read_u16 = |addr: u16| self.bus.read_u16(addr);
         /// 此时寄存器pc的值为指令码地址的后一个地址
         match mode {
             AddressingMode::Immediate => pc,
@@ -109,6 +124,109 @@ impl CPU {
         self.update_zero_flag(result);
         self.update_negative_flag(result);
     }
+}
+
+/// 数据传送指令实现
+impl CPU {
+    fn load_register(&mut self, register_ref: &mut u8, mode: &AddressingMode) {
+        let addr = self.get_operand_address(mode);
+        let data = self.read(addr);
+        *register_ref = data;
+        self.update_zero_and_negative_flags(*register_ref);
+    }
+    fn ldx(&mut self, mode: &AddressingMode) {
+        self.load_register(&mut self.register.x, mode);
+    }
+    fn ldy(&mut self, mode: &AddressingMode) {
+        self.load_register(&mut self.register.y, mode);
+    }
+    fn lda(&mut self, mode: &AddressingMode) {
+        self.load_register(&mut self.register.a, mode);
+    }
+    fn sta(&mut self, mode: &AddressingMode) {
+        let addr = self.get_operand_address(mode);
+        self.write(addr, self.register.a);
+    }
+    fn stx() {}
+    fn sty() {}
+    fn tax() {}
+    fn txa() {}
+    fn tay() {}
+    fn tya() {}
+    fn txs() {}
+    fn tsx() {}
+}
+
+/// 算术运算指令实现
+impl CPU {
+    fn adc() {}
+    fn sbc() {}
+    fn inc() {}
+    fn dec() {}
+    fn inx() {}
+    fn dex() {}
+    fn iny() {}
+    fn dey() {}
+}
+
+/// 逻辑运算指令实现
+impl CPU {
+    fn and() {}
+    fn ora() {}
+    fn eor() {}
+}
+
+/// 置标志位指令实现
+impl CPU {
+    fn clc() {}
+    fn sec() {}
+    fn cld() {}
+    fn sed() {}
+    fn clv() {}
+    fn cli() {}
+    fn sei() {}
+}
+
+/// 比较指令实现
+impl CPU {
+    fn cmp() {}
+    fn cpx() {}
+    fn cpy() {}
+    fn bit() {}
+}
+
+/// 移位指令
+impl CPU {
+    fn asl() {}
+    fn lsr() {}
+    fn rol() {}
+    fn ror() {}
+}
+
+/// 堆栈指令
+impl CPU {
+    fn pha() {}
+    fn pla() {}
+    fn php() {}
+    fn plp() {}
+}
+
+/// 跳转指令
+impl CPU {
+    fn jmp() {}
+    fn beq() {}
+    fn bne() {}
+    fn bcs() {}
+    fn bcc() {}
+    fn bmi() {}
+    fn bpl() {}
+    fn bvs() {}
+    fn bvc() {}
+}
+
+/// 中断指令
+impl CPU {
+    fn int() {}
 }
 
 fn main() {
