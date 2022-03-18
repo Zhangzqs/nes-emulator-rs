@@ -1,3 +1,4 @@
+use crate::bus::Addressable;
 use crate::{Addressable, AddressingMode};
 
 pub struct Memory {
