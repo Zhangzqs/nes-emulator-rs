@@ -9,6 +9,7 @@
 ///  | |   +----------- Break Command
 ///  | +--------------- Overflow Flag
 ///  +----------------- Negative Flag
+#[derive(Clone, Copy)]
 pub struct StatusFlagRegister {
     /// 进位标志(一般对于无符号数来说)，如果最近一条指令有溢出——上溢：超出了 255，下溢：低于 0，则设置该 bit 为 1，
     /// 比如说执行 255 + 1 会上溢，将 Carry Flag 置 1。
