@@ -410,10 +410,39 @@ impl CPU {
 
 /// 堆栈指令
 impl CPU {
-    fn pha(&mut self) {}
-    fn pla(&mut self) {}
-    fn php(&mut self) {}
-    fn plp(&mut self) {}
+    /// 累加器进栈指令 PHA
+    /// PHA是隐含寻址方式的单字节指令，操作码是 48
+    /// 功能是把累加器A的内容按堆栈指针S所指示的位置送入堆栈，然后堆栈指针减1
+    /// 该指令不影响标志寄存器的状态
+    fn pha(&mut self) {
+        self.stack_push(self.register.a)
+    }
+    /// 累加器出栈指令 PLA
+    /// PLA是隐含寻址方式的单字节指令，操作码是 68
+    /// 功能是先让堆栈指针S+1，然后取加过1的S所指向的单元的内容，把它送累加器A
+    /// 该指令影响标志寄存器P中的N，Z两标志位
+    fn pla(&mut self) {
+        let data = self.stack_pop();
+        self.set_register_a(data);
+    }
+    /// 标志寄存器P进栈指令 PHP
+    /// PHP是隐含寻址方式的单字节指令，操作码是 08
+    /// 功能是把标志寄存器P的内容按堆栈指针S所指示的位置送入堆栈，然后堆栈指针减1
+    /// 该指令不影响标志寄存器P的状态
+    fn php(&mut self) {
+        let mut status = self.register.status.clone();
+        status.break_command = true;
+        status.unused = true;
+        self.stack_push(status.into())
+    }
+    /// PLP是隐含寻址方式的单字节指令，操作码是 28
+    /// 功能是先让堆栈指针S+1，然后取加过1的S所指向的单元的内容，把它送标志寄存器P
+    fn plp(&mut self) {
+        let flags = self.stack_pop();
+        self.register.status = StatusFlagRegister::from(flags);
+        self.register.status.break_command = false;
+        self.register.status.unused = true;
+    }
 }
 
 /// 跳转指令
