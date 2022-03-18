@@ -300,9 +300,21 @@ impl CPU {
 
 /// 逻辑运算指令实现
 impl CPU {
-    fn and(&mut self) {}
-    fn ora(&mut self) {}
-    fn eor(&mut self) {}
+    /// AND--寄存器与累加器相与,结果送累加器  A∧M→A
+    fn and(&mut self, mode: &AddressingMode) {
+        let data = self.get_operand(mode);
+        self.set_register_a(data & self.register.a);
+    }
+    /// ORA--寄存器与累加器相或,结果送累加器  A∨M→A
+    fn ora(&mut self, mode: &AddressingMode) {
+        let data = self.get_operand(mode);
+        self.set_register_a(data | self.register.a);
+    }
+    /// EOR--寄存器与累加器相异或,结果送累加器  A≮M→A
+    fn eor(&mut self, mode: &AddressingMode) {
+        let data = self.get_operand(mode);
+        self.set_register_a(data ^ self.register.a);
+    }
 }
 
 /// 置标志位指令实现
