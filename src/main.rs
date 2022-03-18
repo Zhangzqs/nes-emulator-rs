@@ -1,3 +1,5 @@
+mod bus;
+
 /// # Status Register (P) http://wiki.nesdev.com/w/index.php/Status_flags
 ///
 ///  7 6 5 4 3 2 1 0
