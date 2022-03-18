@@ -55,6 +55,15 @@ impl CPU {
 }
 
 impl CPU {
+    /// 获取当前的操作数
+    fn get_operand(&self, mode: &AddressingMode) -> u8 {
+        let addr = self.get_operand_address(mode);
+        self.read(addr)
+    }
+    fn get_operand_u16(&self, mode: &AddressingMode) -> u16 {
+        let addr = self.get_operand_address(mode);
+        self.read_u16(addr)
+    }
     /// 获取当前的操作数的地址
     fn get_operand_address(&self, mode: &AddressingMode) -> u16 {
         let pc = self.register.pc;
@@ -223,7 +232,10 @@ impl CPU {
         self.set_register_a(result);
     }
     /// ADC--累加器,存储器,进位标志C相加,结果送累加器A  A+M+C→A
-    fn adc(&mut self) {}
+    fn adc(&mut self) {
+        let val = self.get_operand(mode);
+        self.add_to_reg_a(val);
+    }
     fn sbc(&mut self) {}
     fn inc(&mut self) {}
     fn dec(&mut self) {}
