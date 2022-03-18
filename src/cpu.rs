@@ -308,11 +308,61 @@ impl CPU {
         data
     }
     /// 逻辑右移指令LSR
-    fn lsr(&mut self, mode: &AddressingMode) {}
+    /// 该指令功能是将字节内各位依次向右移1位，最低位移进标志位C，最高位补0.
+    fn lsr_memory(&mut self, mode: &AddressingMode) -> u8 {
+        let addr = self.get_operand_address(mode) as u16;
+        let data = self.read(addr);
+        self.register.status.carry = data & 1 == 1;
+        let data = data >> 1;
+        self.write(addr, data);
+        self.update_zero_and_negative_flags(data);
+        data
+    }
+    fn lsr_reg_a(&mut self) {
+        let data = self.register.a;
+        self.register.status.carry = data & 1 == 1;
+        let data = data >> 1;
+        self.set_register_a(data);
+    }
     /// 循环左移指令ROL
-    fn rol(&mut self, mode: &AddressingMode) {}
+    /// ROL的移位功能是将字节内容连同进位C一起依次向左移1位
+    fn rol_memory(&mut self, mode: &AddressingMode) -> u8 {
+        let addr = self.get_operand_address(mode) as u16;
+        let data = self.read(addr);
+        let old_carry = self.register.status.carry;
+        self.register.status.carry = data >> 7 == 1;
+        let data = (data << 1) | (old_carry as u8);
+        self.write(addr, data);
+        self.update_negative_flag(data);
+        data
+    }
+    fn rol_reg_a(&mut self) {
+        let data = self.register.a;
+        let old_carry = self.register.status.carry;
+        self.register.status.carry = data >> 7 == 1;
+        let data = (data << 1) | (old_carry as u8);
+        self.set_register_a(data);
+    }
     /// 循环右移指令ROR
-    fn ror(&mut self, mode: &AddressingMode) {}
+    /// ROR的移位功能是将字节内容连同进位C一起依次向右移1位
+    fn ror_memory(&mut self, mode: &AddressingMode) -> u8 {
+        let addr = self.get_operand_address(mode) as u16;
+        let data = self.read(addr);
+        let old_carry = self.register.status.carry;
+        self.register.status.carry = data & 1 == 1;
+        let data = (data >> 1) | ((old_carry as u8) << 7);
+        self.write(addr, data);
+        self.update_negative_flag(data);
+        data
+    }
+
+    fn ror_reg_a(&mut self) {
+        let data = self.register.a;
+        let old_carry = self.register.status.carry;
+        self.register.status.carry = data & 1 == 1;
+        let data = (data >> 1) | ((old_carry as u8) << 7);
+        self.set_register_a(data);
+    }
 }
 
 /// 堆栈指令
