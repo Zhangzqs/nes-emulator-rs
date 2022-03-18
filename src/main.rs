@@ -232,11 +232,17 @@ impl CPU {
         self.set_register_a(result);
     }
     /// ADC--累加器,存储器,进位标志C相加,结果送累加器A  A+M+C→A
-    fn adc(&mut self) {
+    fn adc(&mut self, mode: &AddressingMode) {
         let val = self.get_operand(mode);
         self.add_to_reg_a(val);
     }
-    fn sbc(&mut self) {}
+    /// SBC--从累加器减去存储器和进位标志C,结果送累加器  A-M-C→A
+    fn sbc(&mut self, mode: &AddressingMode) {
+        let val = self.get_operand(mode);
+        let data = val as i8;
+        // add_to_reg_a函数内部完成了累加器与进位标志相加
+        // self.add_to_reg_a()
+    }
     fn inc(&mut self) {}
     fn dec(&mut self) {}
     fn inx(&mut self) {}
@@ -254,13 +260,34 @@ impl CPU {
 
 /// 置标志位指令实现
 impl CPU {
-    fn clc(&mut self) {}
-    fn sec(&mut self) {}
-    fn cld(&mut self) {}
-    fn sed(&mut self) {}
-    fn clv(&mut self) {}
-    fn cli(&mut self) {}
-    fn sei(&mut self) {}
+    /// 清除进位标志
+    fn clc(&mut self) {
+        self.register.status.carry = false;
+    }
+    /// 置进位标志C  
+    fn sec(&mut self) {
+        self.register.status.carry = true;
+    }
+    /// 清除十进制运算标志D
+    fn cld(&mut self) {
+        self.register.status.decimal_mode = false;
+    }
+    /// 置十进制运算标志D
+    fn sed(&mut self) {
+        self.register.status.decimal_mode = true;
+    }
+    /// 清除溢出标志V
+    fn clv(&mut self) {
+        self.register.status.overflow = false;
+    }
+    /// 清除中断禁止指令I
+    fn cli(&mut self) {
+        self.register.status.interrupt_disable = false;
+    }
+    /// 置位中断禁止标志I
+    fn sei(&mut self) {
+        self.register.status.interrupt_disable = true;
+    }
 }
 
 /// 比较指令实现
