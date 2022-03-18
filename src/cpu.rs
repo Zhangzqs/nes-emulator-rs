@@ -540,7 +540,21 @@ impl CPU {
         self.register.pc = jump_addr;
     }
 
-    fn jmp(&mut self) {}
+    /// jmp指令绝对寻址
+    fn jmp_absolute(&mut self) {
+        let addr = self.read_u16(self.register.pc);
+        self.register.pc = addr;
+    }
+
+    /// jmp指令间接寻址
+    fn jmp_indirect(&mut self) {
+        // 获取间接地址(地址的地址(二级指针))
+        let indirect_addr = self.read_u16(self.register.pc);
+        // 得到直接地址(一级指针)
+        let addr = self.read_u16(indirect_addr);
+        // 跳转
+        self.register.pc = addr;
+    }
 
     /// 如果标志位Z=1则转移，否则继续
     fn beq(&mut self) {
