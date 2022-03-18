@@ -2,6 +2,7 @@ use crate::bus::Addressable;
 use crate::register::Register;
 use crate::status::StatusFlagRegister;
 use crate::AddressingMode::{ZeroPage, ZeroPageX};
+use std::ops::Add;
 
 mod bus;
 mod register;
@@ -91,6 +92,22 @@ impl CPU {
             }
             AddressingMode::NoneAddressing => panic!("mode {:?} is not supported", mode),
         }
+    }
+
+    /// 根据执行结果更新负数标志
+    fn update_negative_flag(&mut self, result: u8) {
+        /// 8位整数的最高位符号位为负数标志位
+        self.register.status.negative = result >> 7 == 1;
+    }
+    /// 根据执行结果更新零标志
+    fn update_zero_flag(&mut self, result: u8) {
+        /// 是否为0
+        self.register.status.zero = result == 0;
+    }
+    /// 根据执行结果更新零标志和负数标志
+    fn update_zero_and_negative_flags(&mut self, result: u8) {
+        self.update_zero_flag(result);
+        self.update_negative_flag(result);
     }
 }
 
