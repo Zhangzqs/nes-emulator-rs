@@ -251,13 +251,51 @@ impl CPU {
         let data = val as i8;
         // add_to_reg_a函数内部完成了累加器与进位标志相加
         // self.add_to_reg_a()
+        // TODO
     }
-    fn inc(&mut self) {}
-    fn dec(&mut self) {}
-    fn inx(&mut self) {}
-    fn dex(&mut self) {}
-    fn iny(&mut self) {}
-    fn dey(&mut self) {}
+    /// INC--存储器单元内容增1  M+1→M
+    fn inc(&mut self, mode: &AddressingMode) -> u8 {
+        let addr = self.get_operand_address(mode);
+        let data = self.read(addr);
+        let data = data.wrapping_add(1);
+        self.write(addr, data);
+        self.update_zero_and_negative_flags(data);
+        data
+    }
+
+    /// DEC--存储器单元内容减1  M-1→M
+    fn dec(&mut self, mode: &AddressingMode) -> u8 {
+        let addr = self.get_operand_address(mode);
+        let data = self.read(addr);
+        let data = data.wrapping_sub(1);
+        self.write(addr, data);
+        self.update_zero_and_negative_flags(data);
+        data
+    }
+
+    /// 寄存器X加1
+    fn inx(&mut self) {
+        self.register.x = self.register.x.wrapping_add(1);
+        self.update_zero_and_negative_flags(self.register.x);
+    }
+
+    /// 寄存器X减1
+    fn dex(&mut self) {
+        self.register.x = self.register.x.wrapping_sub(1);
+        self.update_zero_and_negative_flags(self.register.x);
+    }
+
+    /// 寄存器Y加1
+    fn iny(&mut self) {
+        self.register.y = self.register.y.wrapping_add(1);
+        self.update_zero_and_negative_flags(self.register.y);
+    }
+
+    /// 寄存器Y减1
+    fn dey(&mut self) {
+        self.register.x = self.register.x.wrapping_sub(1);
+        self.update_zero_and_negative_flags(self.register.y);
+    }
 }
 
 /// 逻辑运算指令实现
