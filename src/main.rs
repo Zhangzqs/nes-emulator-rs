@@ -108,7 +108,10 @@ impl CPU {
             AddressingMode::NoneAddressing => panic!("mode {:?} is not supported", mode),
         }
     }
+}
 
+/// 更新标志位
+impl CPU {
     /// 根据执行结果更新负数标志
     fn update_negative_flag(&mut self, result: u8) {
         /// 8位整数的最高位符号位为负数标志位
@@ -124,6 +127,17 @@ impl CPU {
         self.update_zero_flag(result);
         self.update_negative_flag(result);
     }
+    /// 根据结果更新进位标志
+    fn update_carry_flag(&mut self, result: u16) {
+        self.register.status.carry = result > 0xFF;
+    }
+}
+
+impl CPU {
+    fn set_register_a(&mut self, value: u8) {
+        self.register.a = value;
+        self.update_zero_and_negative_flags(self.register.a);
+    }
 }
 
 /// 数据传送指令实现
@@ -134,6 +148,7 @@ impl CPU {
         *register_ref = data;
         self.update_zero_and_negative_flags(*register_ref);
     }
+
     /// LDA--由存储器取数送入累加器 M→A
     fn lda(&mut self, mode: &AddressingMode) {
         self.load_register(&mut self.register.a, mode);
@@ -195,6 +210,19 @@ impl CPU {
 
 /// 算术运算指令实现
 impl CPU {
+    /// 向累加器A添加一个数
+    fn add_to_reg_a(&mut self, data: u8) {
+        let a = self.register.a as u16;
+        let data = data as u16;
+        let carry = self.register.status.carry as u16;
+        let sum = a + data + carry;
+        self.update_carry_flag(sum);
+
+        let result = sum as u8;
+        // TODO update overflow flag
+        self.set_register_a(result);
+    }
+    /// ADC--累加器,存储器,进位标志C相加,结果送累加器A  A+M+C→A
     fn adc(&mut self) {}
     fn sbc(&mut self) {}
     fn inc(&mut self) {}
