@@ -154,20 +154,43 @@ impl CPU {
     /// STX--将寄存器X的内容送入存储器 X--M
     fn stx(&mut self) {
         let addr = self.get_operand_address(mode);
-        self.write(addr, self.register.a);
+        self.write(addr, self.register.x);
     }
     /// STY--将寄存器Y的内容送入存储器 Y--M
     fn sty(&mut self) {
         let addr = self.get_operand_address(mode);
-        self.write(addr, self.register.a);
+        self.write(addr, self.register.y);
     }
 
-    fn tax(&mut self) {}
-    fn txa(&mut self) {}
-    fn tay(&mut self) {}
-    fn tya(&mut self) {}
-    fn txs(&mut self) {}
-    fn tsx(&mut self) {}
+    /// 将源寄存器的值传递到目的寄存器
+    fn transport_register(&mut self, src: u8, dist: &mut u8) {
+        *dist = src;
+        self.update_zero_and_negative_flags(*dist);
+    }
+    /// 将累加器A的内容送入变址寄存器X
+    fn tax(&mut self) {
+        self.transport_register(self.register.a, &mut self.register.x)
+    }
+    /// 将变址寄存器X的内容送入累加器A
+    fn txa(&mut self) {
+        self.transport_register(self.register.x, &mut self.register.a)
+    }
+    /// 将累加器A的内容送入变址寄存器Y
+    fn tay(&mut self) {
+        self.transport_register(self.register.a, &mut self.register.y)
+    }
+    ///	将变址寄存器Y的内容送入累加器A
+    fn tya(&mut self) {
+        self.transport_register(self.register.y, &mut self.register.a)
+    }
+    /// 将变址寄存器X的内容送入堆栈指针S
+    fn txs(&mut self) {
+        self.transport_register(self.register.x, &mut self.register.sp)
+    }
+    /// 将堆栈指针S的内容送入变址寄存器X
+    fn tsx(&mut self) {
+        self.transport_register(self.register.sp, &mut self.register.x)
+    }
 }
 
 /// 算术运算指令实现
