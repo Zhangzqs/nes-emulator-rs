@@ -530,15 +530,50 @@ impl CPU {
 
 /// 跳转指令
 impl CPU {
+    /// 有条件跳转指令
+    fn branch(&mut self, condition: bool) {
+        if !condition {
+            return;
+        }
+        let jump = self.read(self.register.pc);
+        let jump_addr = self.register.pc.wrapping_add(1).wrapping_add(jump as u16);
+        self.register.pc = jump_addr;
+    }
+
     fn jmp(&mut self) {}
-    fn beq(&mut self) {}
-    fn bne(&mut self) {}
-    fn bcs(&mut self) {}
-    fn bcc(&mut self) {}
-    fn bmi(&mut self) {}
-    fn bpl(&mut self) {}
-    fn bvs(&mut self) {}
-    fn bvc(&mut self) {}
+
+    /// 如果标志位Z=1则转移，否则继续
+    fn beq(&mut self) {
+        self.branch(self.register.status.zero)
+    }
+    ///如果标志位Z=0则转移，否则继续
+    fn bne(&mut self) {
+        self.branch(!self.register.status.zero)
+    }
+    /// 如果标志位C=1则转移，否则继续
+    fn bcs(&mut self) {
+        self.branch(self.register.status.carry)
+    }
+    /// 如果标志位C=0则转移，否则继续
+    fn bcc(&mut self) {
+        self.branch(!self.register.status.carry)
+    }
+    /// 如果标志位N=1则转移，否则继续
+    fn bmi(&mut self) {
+        self.branch(self.register.status.negative)
+    }
+    /// 如果标志位N=0则转移，否则继续
+    fn bpl(&mut self) {
+        self.branch(!self.register.status.negative)
+    }
+    /// 如果标志位V=1则转移，否则继续
+    fn bvs(&mut self) {
+        self.branch(self.register.status.overflow)
+    }
+    /// 如果标志位V=0则转移，否则继续
+    fn bvc(&mut self) {
+        self.branch(!self.register.status.overflow)
+    }
 }
 
 /// 中断指令
