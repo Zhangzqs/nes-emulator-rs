@@ -7,6 +7,7 @@ mod bus;
 mod register;
 mod status;
 
+#[derive(Debug)]
 pub enum AddressingMode {
     /// 立即数寻址(操作码，操作数)
     Immediate,
