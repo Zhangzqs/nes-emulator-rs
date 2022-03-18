@@ -349,12 +349,45 @@ impl CPU {
     }
 }
 
+/// 比较指令辅助函数
+impl CPU {
+    /// 设A为比较指令的操作数
+    /// 若执行指令CMP后,C=1表示无借位,即A>=M
+    /// 若执行指令CMP后,C=0表示有借位,即A<M
+    /// 若执行指令CMP后,Z=1表示A=M
+    fn compare(&mut self, mode: &AddressingMode, compare_with: u8) {
+        let data = self.get_operand(mode);
+        let sub = compare_with - data;
+        self.register.status.carry = sub >= 0;
+        self.update_zero_and_negative_flags(compare_with.wrapping_sub(data));
+    }
+}
+
 /// 比较指令实现
 impl CPU {
-    fn cmp(&mut self) {}
-    fn cpx(&mut self) {}
-    fn cpy(&mut self) {}
-    fn bit(&mut self) {}
+    fn cmp(&mut self, mode: &AddressingMode) {
+        self.compare(mode, self.register.a);
+    }
+    fn cpx(&mut self, mode: &AddressingMode) {
+        self.compare(mode, self.register.x);
+    }
+    fn cpy(&mut self, mode: &AddressingMode) {
+        self.compare(mode, self.register.y);
+    }
+    /// BIT--位测试指令
+    /// 这条指令的功能和AND指令有相同之处,那就是把累加器A同存储器单元相与,但和AND指令不同的是相与的结果不送入累加器A
+    /// 另外该指令对标志位的影响也和AND指令不同
+    /// 若 结果=0，那么Z=1
+    /// 若 结果<>0,那么Z=0
+    /// N=M的第7位
+    /// V=M的第6位
+    fn bit(&mut self, mode: &AddressingMode) {
+        let data = self.get_operand(mode);
+        let and_result = self.register.a & data;
+        self.register.status.zero = and_result == 0;
+        self.register.status.negative = (data >> 7) == 1;
+        self.register.status.overflow = (data >> 6) == 1;
+    }
 }
 
 /// 移位指令
