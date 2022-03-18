@@ -1,3 +1,4 @@
+use crate::status::StatusFlagRegister;
 use crate::StatusFlagRegister;
 
 pub struct Register {
