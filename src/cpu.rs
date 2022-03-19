@@ -1,9 +1,9 @@
 use crate::bus::Addressable;
+use crate::memory::Memory;
 use crate::register::Register;
 use crate::status::StatusFlagRegister;
-use crate::AddressingMode::{ZeroPage, ZeroPageX};
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum AddressingMode {
     /// 立即数寻址(操作码，操作数)
     Immediate,
@@ -34,6 +34,29 @@ pub struct CPU {
     pub bus: Box<dyn Addressable>,
 }
 
+// #[test]
+// fn test1() {
+//     cpu.load_and_run(vec![0xa9, 0x05, 0x00]);
+//     assert_eq!(cpu.register_a, 5);
+//     assert!(cpu.status.bits() & 0b0000_0010 == 0b00);
+//     assert!(cpu.status.bits() & 0b1000_0000 == 0);
+//     let mem = Box::new(Memory::new());
+//     let mut cpu = CPU::new(mem);
+//     println!("a: {},x: {}", cpu.register.a, cpu.register.x);
+//     cpu.register.a = 12;
+//     cpu.tax();
+//     println!("a: {},x: {}", cpu.register.a, cpu.register.x);
+// }
+
+impl CPU {
+    fn new(bus: Box<dyn Addressable>) -> Self {
+        CPU {
+            register: Register::default(),
+            bus,
+        }
+    }
+}
+
 /// 两字节打包成u16
 fn pack_u16(high: u8, low: u8) -> u16 {
     let high = high as u16;
@@ -55,10 +78,10 @@ impl CPU {
     fn read_u16(&self, addr: u16) -> u16 {
         self.bus.read_u16(addr)
     }
-    fn write(&self, addr: u16, data: u8) {
+    fn write(&mut self, addr: u16, data: u8) {
         self.bus.write(addr, data);
     }
-    fn write_u16(&self, addr: u16, data: u16) {
+    fn write_u16(&mut self, addr: u16, data: u16) {
         self.bus.write_u16(addr, data);
     }
 }
@@ -78,10 +101,10 @@ impl CPU {
         let pc = self.register.pc;
         let x = self.register.x;
         let y = self.register.y;
-        let read = self.read;
-        let read_u16 = self.read_u16;
+        let read = |addr: u16| self.read(addr);
+        let read_u16 = |addr: u16| self.read_u16(addr);
 
-        /// 此时寄存器pc的值为指令码地址的后一个地址
+        // 此时寄存器pc的值为指令码地址的后一个地址
         match mode {
             AddressingMode::Immediate => pc,
 
@@ -106,8 +129,8 @@ impl CPU {
                 base.wrapping_add(x_or_y as u16)
             }
             AddressingMode::IndirectX => {
-                /// X间接寻址(操作码，零页基地址)
-                /// *(X+base) | *(X+base+1) << 8
+                // X间接寻址(操作码，零页基地址)
+                // *(X+base) | *(X+base+1) << 8
                 let base = read(pc);
                 let ptr = base.wrapping_add(x);
                 let low = read(ptr as u16);
@@ -115,8 +138,8 @@ impl CPU {
                 (low as u16) | ((high as u16) << 8)
             }
             AddressingMode::IndirectY => {
-                /// Y间接寻址(操作码，零页间接地址)
-                /// *(base) | *(base+1) << 8 + Y
+                // Y间接寻址(操作码，零页间接地址)
+                // *(base) | *(base+1) << 8 + Y
                 let base_ptr = read(pc);
                 let low = read(base_ptr as u16);
                 let high = read(base_ptr.wrapping_add(1) as u16);
@@ -132,12 +155,12 @@ impl CPU {
 impl CPU {
     /// 根据执行结果更新负数标志
     fn update_negative_flag(&mut self, result: u8) {
-        /// 8位整数的最高位符号位为负数标志位
+        // 8位整数的最高位符号位为负数标志位
         self.register.status.negative = result >> 7 == 1;
     }
     /// 根据执行结果更新零标志
     fn update_zero_flag(&mut self, result: u8) {
-        /// 是否为0
+        // 是否为0
         self.register.status.zero = result == 0;
     }
     /// 根据执行结果更新零标志和负数标志
@@ -160,24 +183,29 @@ impl CPU {
 
 /// 数据传送指令实现
 impl CPU {
-    fn load_register(&mut self, register_ref: &mut u8, mode: &AddressingMode) {
+    fn load_register(&mut self, register_ref: *mut u8, mode: &AddressingMode) {
         let addr = self.get_operand_address(mode);
         let data = self.read(addr);
-        *register_ref = data;
-        self.update_zero_and_negative_flags(*register_ref);
+        unsafe {
+            *register_ref = data;
+            self.update_zero_and_negative_flags(*register_ref);
+        }
     }
 
     /// LDA--由存储器取数送入累加器 M→A
     fn lda(&mut self, mode: &AddressingMode) {
-        self.load_register(&mut self.register.a, mode);
+        let register_ptr = &mut self.register.a as *mut u8;
+        self.load_register(register_ptr, mode);
     }
-    /// LDX--由存储器取数送入累加器 M→X
+    /// LDX--由存储器取数送入寄存器X M→X
     fn ldx(&mut self, mode: &AddressingMode) {
-        self.load_register(&mut self.register.x, mode);
+        let register_ptr = &mut self.register.x as *mut u8;
+        self.load_register(register_ptr, mode);
     }
-    /// LDY--由存储器取数送入累加器 M→Y
+    /// LDY--由存储器取数送入寄存器Y M→Y
     fn ldy(&mut self, mode: &AddressingMode) {
-        self.load_register(&mut self.register.y, mode);
+        let register_ptr = &mut self.register.y as *mut u8;
+        self.load_register(register_ptr, mode);
     }
     /// STA--将累加器的内容送入存储器 A--M
     fn sta(&mut self, mode: &AddressingMode) {
@@ -185,44 +213,52 @@ impl CPU {
         self.write(addr, self.register.a);
     }
     /// STX--将寄存器X的内容送入存储器 X--M
-    fn stx(&mut self) {
+    fn stx(&mut self, mode: &AddressingMode) {
         let addr = self.get_operand_address(mode);
         self.write(addr, self.register.x);
     }
     /// STY--将寄存器Y的内容送入存储器 Y--M
-    fn sty(&mut self) {
+    fn sty(&mut self, mode: &AddressingMode) {
         let addr = self.get_operand_address(mode);
         self.write(addr, self.register.y);
     }
 
     /// 将源寄存器的值传递到目的寄存器
-    fn transport_register(&mut self, src: u8, dist: &mut u8) {
-        *dist = src;
-        self.update_zero_and_negative_flags(*dist);
+    fn transport_register(&mut self, src: u8, dist_ptr: *mut u8) {
+        unsafe {
+            *dist_ptr = src;
+            self.update_zero_and_negative_flags(*dist_ptr);
+        }
     }
     /// 将累加器A的内容送入变址寄存器X
     fn tax(&mut self) {
-        self.transport_register(self.register.a, &mut self.register.x)
+        let dist_ptr = &mut self.register.x as *mut u8;
+        self.transport_register(self.register.a, dist_ptr)
     }
     /// 将变址寄存器X的内容送入累加器A
     fn txa(&mut self) {
-        self.transport_register(self.register.x, &mut self.register.a)
+        let dist_ptr = &mut self.register.a as *mut u8;
+        self.transport_register(self.register.x, dist_ptr)
     }
     /// 将累加器A的内容送入变址寄存器Y
     fn tay(&mut self) {
-        self.transport_register(self.register.a, &mut self.register.y)
+        let dist_ptr = &mut self.register.y as *mut u8;
+        self.transport_register(self.register.a, dist_ptr)
     }
     ///	将变址寄存器Y的内容送入累加器A
     fn tya(&mut self) {
-        self.transport_register(self.register.y, &mut self.register.a)
+        let dist_ptr = &mut self.register.a as *mut u8;
+        self.transport_register(self.register.y, dist_ptr)
     }
     /// 将变址寄存器X的内容送入堆栈指针S
     fn txs(&mut self) {
-        self.transport_register(self.register.x, &mut self.register.sp)
+        let dist_ptr = &mut self.register.sp as *mut u8;
+        self.transport_register(self.register.x, dist_ptr)
     }
     /// 将堆栈指针S的内容送入变址寄存器X
     fn tsx(&mut self) {
-        self.transport_register(self.register.sp, &mut self.register.x)
+        let dist_ptr = &mut self.register.x as *mut u8;
+        self.transport_register(self.register.sp, dist_ptr)
     }
 }
 
@@ -473,10 +509,10 @@ const STACK_START: u16 = 0x0100;
 impl CPU {
     fn stack_pop(&mut self) -> u8 {
         self.register.sp = self.register.sp.wrapping_add(1);
-        self.read(STACK_START + self.register.sp)
+        self.read(STACK_START + self.register.sp as u16)
     }
     fn stack_push(&mut self, data: u8) {
-        self.write(STACK_START + self.register.sp, data);
+        self.write(STACK_START + self.register.sp as u16, data);
         self.register.sp = self.register.sp.wrapping_sub(1)
     }
     fn stack_pop_u16(&mut self) -> u16 {

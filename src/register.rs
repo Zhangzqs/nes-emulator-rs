@@ -1,5 +1,4 @@
 use crate::status::StatusFlagRegister;
-use crate::StatusFlagRegister;
 
 pub struct Register {
     /// 寄存器A
