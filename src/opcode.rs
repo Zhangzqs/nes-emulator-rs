@@ -381,10 +381,13 @@ static OPCODES_MAP: Lazy<Mutex<HashMap<u8, OpCode>>> = Lazy::new(|| {
     Mutex::new(map)
 });
 
-pub fn get_opcode(opcode: u8) -> OpCode {
+pub fn get_opcode(opcode: u8) -> Option<OpCode> {
     let a = OPCODES_MAP.lock().unwrap();
-    let b = a.get(&opcode).unwrap();
-    *b
+    let b = a.get(&opcode);
+    match b {
+        None => None,
+        Some(c) => Some(*c),
+    }
 }
 
 #[test]
