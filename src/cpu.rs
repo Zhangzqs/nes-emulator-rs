@@ -105,12 +105,13 @@ impl CPU {
         self.write_u16(0xFFFC, 0x0600);
     }
     fn run(&mut self) {
-        use crate::opcode::get_opcode;
+        use crate::opcode::get_opcode_by_code;
         loop {
             let code = self.read(self.register.pc);
             self.register.pc += 1;
             let old_pc = self.register.pc;
-            let opcode = get_opcode(code).expect(&format!("OpCode {:x} is not recognized", code));
+            let opcode =
+                get_opcode_by_code(code).expect(&format!("OpCode {:x} is not recognized", code));
             match code {
                 0xa9 | 0xa5 | 0xb5 | 0xad | 0xbd | 0xb9 | 0xa1 | 0xb1 => self.lda(&opcode.mode),
                 0xAA => self.tax(),

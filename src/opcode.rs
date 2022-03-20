@@ -28,8 +28,8 @@ impl OpCode {
     }
 }
 
-static OPCODES_MAP: Lazy<Mutex<HashMap<u8, OpCode>>> = Lazy::new(|| {
-    let opcodes = vec![
+static OPCODES: Lazy<Vec<OpCode>> = Lazy::new(|| {
+    vec![
         OpCode::new(0x00, "BRK", 1, 7, AddressingMode::NoneAddressing),
         OpCode::new(0xea, "NOP", 1, 2, AddressingMode::NoneAddressing),
         /* Arithmetic */
@@ -373,24 +373,22 @@ static OPCODES_MAP: Lazy<Mutex<HashMap<u8, OpCode>>> = Lazy::new(|| {
         OpCode::new(0x68, "PLA", 1, 4, AddressingMode::NoneAddressing),
         OpCode::new(0x08, "PHP", 1, 3, AddressingMode::NoneAddressing),
         OpCode::new(0x28, "PLP", 1, 4, AddressingMode::NoneAddressing),
-    ];
-    let mut map: HashMap<u8, OpCode> = HashMap::new();
-    for cpu_op in opcodes {
-        map.insert(cpu_op.code, cpu_op);
-    }
-    Mutex::new(map)
+    ]
 });
 
-pub fn get_opcode(opcode: u8) -> Option<OpCode> {
-    let a = OPCODES_MAP.lock().unwrap();
-    let b = a.get(&opcode);
-    match b {
-        None => None,
-        Some(c) => Some(*c),
+static OPCODES_MAP: Lazy<HashMap<u8, &'static OpCode>> = Lazy::new(|| {
+    let mut map: HashMap<u8, &'static OpCode> = HashMap::new();
+    for cpu_op in OPCODES.iter() {
+        map.insert(cpu_op.code, cpu_op);
     }
+    map
+});
+
+pub fn get_opcode_by_code(opcode: u8) -> Option<&'static OpCode> {
+    OPCODES_MAP.get(&opcode).map(|x| *x)
 }
 
 #[test]
 fn test_get_opcode() {
-    println!("{:?}", get_opcode(0x28));
+    println!("{:?}", get_opcode_by_code(0x28));
 }
