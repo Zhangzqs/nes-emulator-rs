@@ -90,15 +90,21 @@ mod test {
 }
 
 impl CPU {
+    /// 触发CPU外部中断
+    pub fn reset(&mut self) {
+        self.register = Register::default();
+        self.register.pc = self.read_u16(0xFFFC);
+    }
+    pub fn irq(&mut self) {}
+}
+
+impl CPU {
     pub fn load_and_run(&mut self, program: Vec<u8>) {
         self.load(program);
         self.reset();
         self.run();
     }
-    pub fn reset(&mut self) {
-        self.register = Register::default();
-        self.register.pc = self.read_u16(0xFFFC);
-    }
+
     pub fn load(&mut self, program: Vec<u8>) {
         for i in 0..(program.len()) {
             self.write(0x0600 + i as u16, program[i]);
