@@ -9,7 +9,7 @@
 ///  | |   +----------- Break Command
 ///  | +--------------- Overflow Flag
 ///  +----------------- Negative Flag
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub struct StatusFlagRegister {
     /// 进位标志(一般对于无符号数来说)，如果最近一条指令有溢出——上溢：超出了 255，下溢：低于 0，则设置该 bit 为 1，
     /// 比如说执行 255 + 1 会上溢，将 Carry Flag 置 1。
@@ -39,13 +39,31 @@ impl From<u8> for StatusFlagRegister {
             carry: ((bits >> 0) & 1) != 0,
             zero: ((bits >> 1) & 1) != 0,
             interrupt_disable: ((bits >> 2) & 1) != 0,
-            decimal_mode: ((bits >> 1) & 3) != 0,
-            break_command: ((bits >> 1) & 4) != 0,
-            unused: ((bits >> 1) & 5) != 0,
-            overflow: ((bits >> 1) & 6) != 0,
-            negative: ((bits >> 1) & 7) != 0,
+            decimal_mode: ((bits >> 3) & 1) != 0,
+            break_command: ((bits >> 4) & 1) != 0,
+            unused: ((bits >> 5) & 1) != 0,
+            overflow: ((bits >> 6) & 1) != 0,
+            negative: ((bits >> 7) & 1) != 0,
         }
     }
+}
+
+#[test]
+fn test_status_from() {
+    let status = StatusFlagRegister::from(0b1101_0110);
+    assert!(
+        status
+            == StatusFlagRegister {
+                carry: false,
+                zero: true,
+                interrupt_disable: true,
+                decimal_mode: false,
+                break_command: true,
+                unused: false,
+                overflow: true,
+                negative: true
+            }
+    )
 }
 
 impl Into<u8> for StatusFlagRegister {
@@ -65,6 +83,22 @@ impl Into<u8> for StatusFlagRegister {
         }
         result
     }
+}
+
+#[test]
+fn test_status_info() {
+    let status = StatusFlagRegister {
+        carry: false,
+        zero: true,
+        interrupt_disable: true,
+        decimal_mode: false,
+        break_command: true,
+        unused: false,
+        overflow: true,
+        negative: true,
+    };
+    let status_bits: u8 = status.into();
+    assert_eq!(status_bits, 0b1101_0110)
 }
 
 impl Default for StatusFlagRegister {
