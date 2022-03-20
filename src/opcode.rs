@@ -1,7 +1,6 @@
 use crate::cpu::AddressingMode;
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
-use std::sync::Mutex;
 
 #[derive(Debug, Copy, Clone)]
 pub struct OpCode {
@@ -16,6 +15,7 @@ pub struct OpCode {
     /// 寻址模式
     pub mode: AddressingMode,
 }
+
 impl OpCode {
     fn new(code: u8, mnemonic: &'static str, length: u8, cycles: u8, mode: AddressingMode) -> Self {
         OpCode {
