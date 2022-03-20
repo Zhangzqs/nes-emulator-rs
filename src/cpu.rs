@@ -90,7 +90,7 @@ mod test {
 }
 
 impl CPU {
-    fn load_and_run(&mut self, program: Vec<u8>) {
+    pub fn load_and_run(&mut self, program: Vec<u8>) {
         self.load(program);
         self.reset();
         self.run();
@@ -243,10 +243,7 @@ impl CPU {
         let addr = self.get_operand_address(mode);
         self.read(addr)
     }
-    fn get_operand_u16(&self, mode: &AddressingMode) -> u16 {
-        let addr = self.get_operand_address(mode);
-        self.read_u16(addr)
-    }
+
     /// 获取当前的操作数的地址
     fn get_operand_address(&self, mode: &AddressingMode) -> u16 {
         let pc = self.register.pc;
@@ -792,5 +789,5 @@ impl CPU {
 
 /// 中断指令
 impl CPU {
-    fn int(&mut self) {}
+    // fn int(&mut self) {}
 }
