@@ -1,5 +1,4 @@
 use crate::bus::Addressable;
-use crate::memory::Memory;
 use crate::register::Register;
 use crate::status::StatusFlagRegister;
 
@@ -36,6 +35,8 @@ pub struct CPU {
 
 #[cfg(test)]
 mod test {
+    use crate::memory::Memory;
+
     use super::*;
 
     #[test]
@@ -94,99 +95,112 @@ impl CPU {
         self.reset();
         self.run();
     }
-    fn reset(&mut self) {
+    pub fn reset(&mut self) {
         self.register = Register::default();
         self.register.pc = self.read_u16(0xFFFC);
     }
-    fn load(&mut self, program: Vec<u8>) {
+    pub fn load(&mut self, program: Vec<u8>) {
         for i in 0..(program.len()) {
             self.write(0x0600 + i as u16, program[i]);
         }
         self.write_u16(0xFFFC, 0x0600);
     }
-    fn run(&mut self) {
-        use crate::opcode::get_opcode_by_code;
-        loop {
-            let code = self.read(self.register.pc);
-            self.register.pc += 1;
-            let old_pc = self.register.pc;
-            let opcode =
-                get_opcode_by_code(code).expect(&format!("OpCode {:x} is not recognized", code));
-            match code {
-                0xa9 | 0xa5 | 0xb5 | 0xad | 0xbd | 0xb9 | 0xa1 | 0xb1 => self.lda(&opcode.mode),
-                0xAA => self.tax(),
-                0xa8 => self.tay(),
-                0xba => self.tsx(),
-                0x8a => self.txa(),
-                0x9a => self.txs(),
-                0x98 => self.tya(),
-                0xe8 => self.inx(),
-                0xd8 => self.cld(),
-                0x58 => self.cli(),
-                0xb8 => self.clv(),
-                0x18 => self.clc(),
-                0x38 => self.sec(),
-                0x78 => self.sei(),
-                0xf8 => self.sed(),
-                0x48 => self.pha(),
-                0x68 => self.pla(),
-                0x08 => self.php(),
-                0x28 => self.plp(),
-                0x69 | 0x65 | 0x75 | 0x6d | 0x7d | 0x79 | 0x61 | 0x71 => self.adc(&opcode.mode),
-                0xe9 | 0xe5 | 0xf5 | 0xed | 0xfd | 0xf9 | 0xe1 | 0xf1 => self.sbc(&opcode.mode),
-                0x29 | 0x25 | 0x35 | 0x2d | 0x3d | 0x39 | 0x21 | 0x31 => self.and(&opcode.mode),
-                0x49 | 0x45 | 0x55 | 0x4d | 0x5d | 0x59 | 0x41 | 0x51 => self.eor(&opcode.mode),
-                0x09 | 0x05 | 0x15 | 0x0d | 0x1d | 0x19 | 0x01 | 0x11 => self.ora(&opcode.mode),
-                0x4a => self.lsr_reg_a(),
-                0x46 | 0x56 | 0x4e | 0x5e => self.lsr_memory(&opcode.mode),
-                0x0a => self.asl_reg_a(),
-                0x06 | 0x16 | 0x0e | 0x1e => self.asl_memory(&opcode.mode),
-                0x2a => self.rol_reg_a(),
-                0x26 | 0x36 | 0x2e | 0x3e => self.rol_memory(&opcode.mode),
-                0x6a => self.ror_reg_a(),
-                0x66 | 0x76 | 0x6e | 0x7e => self.ror_memory(&opcode.mode),
-                0xe6 | 0xf6 | 0xee | 0xfe => self.inc(&opcode.mode),
-                0xc8 => self.iny(),
-                0xc6 | 0xd6 | 0xce | 0xde => self.dec(&opcode.mode),
-                0xca => self.dex(),
-                0x88 => self.dey(),
-                0xc9 | 0xc5 | 0xd5 | 0xcd | 0xdd | 0xd9 | 0xc1 | 0xd1 => self.cmp(&opcode.mode),
-                0xc0 | 0xc4 | 0xcc => self.cpy(&opcode.mode),
-                0xe0 | 0xe4 | 0xec => self.cpx(&opcode.mode),
-                0x4c => self.jmp_absolute(),
-                0x6c => self.jmp_indirect(),
-                0x20 => self.jsr(),
-                0x60 => self.rts(),
-                0x40 => self.rti(),
-                0xd0 => self.bne(),
-                0x70 => self.bvs(),
-                0x50 => self.bvc(),
-                0x10 => self.bpl(),
-                0x30 => self.bmi(),
-                0xf0 => self.beq(),
-                0xb0 => self.bcs(),
-                0x90 => self.bcc(),
-                0x24 | 0x2c => self.bit(&opcode.mode),
-                0x85 | 0x95 | 0x8d | 0x9d | 0x99 | 0x81 | 0x91 => self.sta(&opcode.mode),
-                0x86 | 0x96 | 0x8e => self.stx(&opcode.mode),
-                0x84 | 0x94 | 0x8c => self.sty(&opcode.mode),
-                0xa2 | 0xa6 | 0xb6 | 0xae | 0xbe => self.ldx(&opcode.mode),
-                0xa0 | 0xa4 | 0xb4 | 0xac | 0xbc => self.ldy(&opcode.mode),
-                0xea => {}
+    pub fn run(&mut self) {
+        self.run_with_callback(|_| {});
+    }
 
-                0x00 => return,
-                _ => todo!(),
-            }
-            // 没有执行跳转指令
-            if old_pc == self.register.pc {
-                self.register.pc += (opcode.length - 1) as u16;
+    pub fn run_with_callback<F: FnMut(&mut CPU)>(&mut self, mut callback: F) {
+        while self.run_one_instruction() {
+            callback(self);
+        }
+    }
+
+    /// 返回值为false表示程序结束
+    fn run_one_instruction(&mut self) -> bool {
+        use crate::opcode::get_opcode_by_code;
+        let code = self.read(self.register.pc);
+        self.register.pc += 1;
+        let old_pc = self.register.pc;
+        let opcode =
+            get_opcode_by_code(code).expect(&format!("OpCode {:x} is not recognized", code));
+
+        match code {
+            0xa9 | 0xa5 | 0xb5 | 0xad | 0xbd | 0xb9 | 0xa1 | 0xb1 => self.lda(&opcode.mode),
+            0xAA => self.tax(),
+            0xa8 => self.tay(),
+            0xba => self.tsx(),
+            0x8a => self.txa(),
+            0x9a => self.txs(),
+            0x98 => self.tya(),
+            0xe8 => self.inx(),
+            0xd8 => self.cld(),
+            0x58 => self.cli(),
+            0xb8 => self.clv(),
+            0x18 => self.clc(),
+            0x38 => self.sec(),
+            0x78 => self.sei(),
+            0xf8 => self.sed(),
+            0x48 => self.pha(),
+            0x68 => self.pla(),
+            0x08 => self.php(),
+            0x28 => self.plp(),
+            0x69 | 0x65 | 0x75 | 0x6d | 0x7d | 0x79 | 0x61 | 0x71 => self.adc(&opcode.mode),
+            0xe9 | 0xe5 | 0xf5 | 0xed | 0xfd | 0xf9 | 0xe1 | 0xf1 => self.sbc(&opcode.mode),
+            0x29 | 0x25 | 0x35 | 0x2d | 0x3d | 0x39 | 0x21 | 0x31 => self.and(&opcode.mode),
+            0x49 | 0x45 | 0x55 | 0x4d | 0x5d | 0x59 | 0x41 | 0x51 => self.eor(&opcode.mode),
+            0x09 | 0x05 | 0x15 | 0x0d | 0x1d | 0x19 | 0x01 | 0x11 => self.ora(&opcode.mode),
+            0x4a => self.lsr_reg_a(),
+            0x46 | 0x56 | 0x4e | 0x5e => self.lsr_memory(&opcode.mode),
+            0x0a => self.asl_reg_a(),
+            0x06 | 0x16 | 0x0e | 0x1e => self.asl_memory(&opcode.mode),
+            0x2a => self.rol_reg_a(),
+            0x26 | 0x36 | 0x2e | 0x3e => self.rol_memory(&opcode.mode),
+            0x6a => self.ror_reg_a(),
+            0x66 | 0x76 | 0x6e | 0x7e => self.ror_memory(&opcode.mode),
+            0xe6 | 0xf6 | 0xee | 0xfe => self.inc(&opcode.mode),
+            0xc8 => self.iny(),
+            0xc6 | 0xd6 | 0xce | 0xde => self.dec(&opcode.mode),
+            0xca => self.dex(),
+            0x88 => self.dey(),
+            0xc9 | 0xc5 | 0xd5 | 0xcd | 0xdd | 0xd9 | 0xc1 | 0xd1 => self.cmp(&opcode.mode),
+            0xc0 | 0xc4 | 0xcc => self.cpy(&opcode.mode),
+            0xe0 | 0xe4 | 0xec => self.cpx(&opcode.mode),
+            0x4c => self.jmp_absolute(),
+            0x6c => self.jmp_indirect(),
+            0x20 => self.jsr(),
+            0x60 => self.rts(),
+            0x40 => self.rti(),
+            0xd0 => self.bne(),
+            0x70 => self.bvs(),
+            0x50 => self.bvc(),
+            0x10 => self.bpl(),
+            0x30 => self.bmi(),
+            0xf0 => self.beq(),
+            0xb0 => self.bcs(),
+            0x90 => self.bcc(),
+            0x24 | 0x2c => self.bit(&opcode.mode),
+            0x85 | 0x95 | 0x8d | 0x9d | 0x99 | 0x81 | 0x91 => self.sta(&opcode.mode),
+            0x86 | 0x96 | 0x8e => self.stx(&opcode.mode),
+            0x84 | 0x94 | 0x8c => self.sty(&opcode.mode),
+            0xa2 | 0xa6 | 0xb6 | 0xae | 0xbe => self.ldx(&opcode.mode),
+            0xa0 | 0xa4 | 0xb4 | 0xac | 0xbc => self.ldy(&opcode.mode),
+            0xea => {}
+
+            0x00 => return false,
+            _ => {
+                panic!("Unsupported code: {}", code)
             }
         }
+        // 没有执行跳转指令
+        if old_pc == self.register.pc {
+            self.register.pc += (opcode.length - 1) as u16;
+        }
+        true
     }
 }
 
 impl CPU {
-    fn new(bus: Box<dyn Addressable>) -> Self {
+    pub fn new(bus: Box<dyn Addressable>) -> Self {
         CPU {
             register: Register::default(),
             bus,
@@ -256,12 +270,12 @@ impl CPU {
                 let base = match mode {
                     AddressingMode::ZeroPageX | AddressingMode::ZeroPageY => read(pc) as u16,
                     AddressingMode::AbsoluteX | AddressingMode::AbsoluteY => read_u16(pc),
-                    _ => todo!(),
+                    _ => panic!(),
                 };
                 let x_or_y = match mode {
                     AddressingMode::ZeroPageX | AddressingMode::AbsoluteX => x,
                     AddressingMode::ZeroPageY | AddressingMode::AbsoluteY => y,
-                    _ => todo!(),
+                    _ => panic!(),
                 };
                 base.wrapping_add(x_or_y as u16)
             }
@@ -407,10 +421,11 @@ impl CPU {
         let data = data as u16;
         let carry = self.register.status.carry as u16;
         let sum = a + data + carry;
-        self.update_carry_flag(sum);
 
+        self.update_carry_flag(sum);
         let result = sum as u8;
-        // TODO update overflow flag
+        let data = data as u8;
+        self.register.status.overflow = (data ^ result) & (result ^ self.register.a) & 0x80 != 0;
         self.set_register_a(result);
     }
     /// ADC--累加器,存储器,进位标志C相加,结果送累加器A  A+M+C→A
@@ -423,8 +438,7 @@ impl CPU {
         let val = self.get_operand(mode);
         let data = val as i8;
         // add_to_reg_a函数内部完成了累加器与进位标志相加
-        // self.add_to_reg_a()
-        // TODO
+        self.add_to_reg_a(data.wrapping_neg().wrapping_sub(1) as u8);
     }
     /// INC--存储器单元内容增1  M+1→M
     fn inc(&mut self, mode: &AddressingMode) {
@@ -528,7 +542,7 @@ impl CPU {
     /// 若执行指令CMP后,Z=1表示A=M
     fn compare(&mut self, mode: &AddressingMode, compare_with: u8) {
         let data = self.get_operand(mode);
-        let sub = compare_with - data;
+        let sub = compare_with as i16 - data as i16;
         self.register.status.carry = sub >= 0;
         self.update_zero_and_negative_flags(compare_with.wrapping_sub(data));
     }
@@ -702,8 +716,10 @@ impl CPU {
         if !condition {
             return;
         }
-        let jump = self.read(self.register.pc);
-        let jump_addr = self.register.pc.wrapping_add(1).wrapping_add(jump as u16);
+        // 这里使用相对寻址，其相对地址为8位有符号整数
+        let jump = self.read(self.register.pc) as i8;
+        // 计算目标地址
+        let jump_addr = (self.register.pc as i32 + jump as i32 + 1) as u16;
         self.register.pc = jump_addr;
     }
 
