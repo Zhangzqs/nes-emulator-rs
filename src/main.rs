@@ -16,6 +16,7 @@ mod addressable;
 mod asm;
 mod bus;
 mod cpu;
+mod flag;
 mod mapper;
 mod memory;
 mod meta;
