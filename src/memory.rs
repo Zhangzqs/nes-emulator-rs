@@ -1,4 +1,4 @@
-use crate::bus::Addressable;
+use crate::addressable::Addressable;
 
 pub struct Memory {
     data: [u8; 0x10000],

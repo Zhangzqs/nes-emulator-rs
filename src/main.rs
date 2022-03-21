@@ -1,18 +1,25 @@
+extern crate core;
+
+use crate::bus::Bus;
+use bus::BusBuilder;
 use rand::Rng;
-use sdl2::EventPump;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::{Color, PixelFormatEnum};
+use sdl2::EventPump;
 
 use crate::cpu::CPU;
 use crate::memory::Memory;
 
+mod addressable;
 mod asm;
 mod bus;
 mod cpu;
+mod mapper;
 mod memory;
 mod opcode;
 mod register;
+mod rom;
 mod status;
 
 fn color(byte: u8) -> Color {
@@ -127,8 +134,9 @@ fn main() {
     ];
 
     //load the game
-    let bus = Box::new(Memory::new());
-    let mut cpu = CPU::new(bus);
+    let memory = Box::new(Memory::new());
+    let bus = BusBuilder::new().ram(memory).build().unwrap();
+    let mut cpu = CPU::new(Box::new(bus));
     cpu.load(game_code);
     cpu.reset();
 

@@ -1,4 +1,4 @@
-use crate::bus::Addressable;
+use crate::addressable::Addressable;
 use crate::register::Register;
 use crate::status::StatusFlagRegister;
 
