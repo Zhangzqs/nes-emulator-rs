@@ -90,3 +90,18 @@ with open('flag/mask.rs', 'w') as f:
             'emphasise_blue',
         ],
     ))
+
+with open('flag/status.rs', 'w') as f:
+    f.write(code_gen(
+        struct_name="StatusRegister",
+        fields=[
+            'unused_1',
+            'unused_2',
+            'unused_3',
+            'unused_4',
+            'unused_5',
+            'sprite_overflow',
+            'sprite_zero_hit',
+            'vblank_started',
+        ],
+    ))

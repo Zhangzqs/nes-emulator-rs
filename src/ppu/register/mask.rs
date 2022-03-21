@@ -19,14 +19,14 @@ pub enum Color {
 }
 
 pub struct MaskRegister {
-    is_grey_scale: bool,
-    leftmost_8pxl_background: bool,
-    leftmost_8pxl_sprite: bool,
-    show_background: bool,
-    show_sprite: bool,
-    emphasise_red: bool,
-    emphasise_green: bool,
-    emphasise_blue: bool,
+    pub is_grey_scale: bool,
+    pub leftmost_8pxl_background: bool,
+    pub leftmost_8pxl_sprite: bool,
+    pub show_background: bool,
+    pub show_sprite: bool,
+    pub emphasise_red: bool,
+    pub emphasise_green: bool,
+    pub emphasise_blue: bool,
 }
 
 impl From<u8> for MaskRegister {
@@ -73,5 +73,21 @@ impl FlagRegister for MaskRegister {
         self.emphasise_red = ((data >> 5) & 1) != 0;
         self.emphasise_green = ((data >> 6) & 1) != 0;
         self.emphasise_blue = ((data >> 7) & 1) != 0;
+    }
+}
+
+impl MaskRegister {
+    pub fn emphasise(&self) -> Vec<Color> {
+        let mut result = Vec::<Color>::new();
+        if self.emphasise_red {
+            result.push(Color::Red);
+        }
+        if self.emphasise_green {
+            result.push(Color::Green);
+        }
+        if self.emphasise_blue {
+            result.push(Color::Blue);
+        }
+        result
     }
 }
