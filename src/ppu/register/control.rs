@@ -15,6 +15,8 @@
 // +--------- Generate an NMI at the start of the
 //            vertical blanking interval (0: off; 1: on)
 
+use crate::flag::FlagRegister;
+
 pub struct ControlRegister {
     nametable_1: bool,
     nametable_2: bool,
@@ -57,6 +59,19 @@ impl Into<u8> for ControlRegister {
             result = result | (bit << i);
         }
         result
+    }
+}
+
+impl FlagRegister for ControlRegister {
+    fn update(&mut self, data: u8) {
+        self.nametable_1 = ((data >> 0) & 1) != 0;
+        self.nametable_2 = ((data >> 1) & 1) != 0;
+        self.vram_address_increment = ((data >> 2) & 1) != 0;
+        self.sprite_pattern_address = ((data >> 3) & 1) != 0;
+        self.background_pattern_address = ((data >> 4) & 1) != 0;
+        self.sprite_size = ((data >> 5) & 1) != 0;
+        self.master_slave_select = ((data >> 6) & 1) != 0;
+        self.generate_vblank_nmi = ((data >> 7) & 1) != 0;
     }
 }
 
