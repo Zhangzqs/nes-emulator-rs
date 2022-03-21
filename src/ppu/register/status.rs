@@ -66,4 +66,7 @@ impl StatusRegister {
     pub fn snapshot(&self) -> u8 {
         self.clone().into()
     }
+    pub fn reset_vblank_status(&mut self) {
+        self.vblank_started = false;
+    }
 }
