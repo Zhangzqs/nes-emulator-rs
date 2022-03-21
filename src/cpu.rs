@@ -32,89 +32,18 @@ pub struct CPU {
     pub register: Register,
     pub bus: Box<dyn Addressable>,
 }
-
-#[cfg(test)]
-mod test {
-    use crate::memory::Memory;
-
-    use super::*;
-
-    #[test]
-    fn test_0xa9_lda_immidiate_load_data() {
-        let bus = Box::new(Memory::new());
-        let mut cpu = CPU::new(bus);
-        cpu.load_and_run(vec![0xa9, 0x05, 0x00]);
-        assert_eq!(cpu.register.a, 5);
-        let status: u8 = cpu.register.status.into();
-        assert_eq!(status & 0b0000_0010, 0b00);
-        assert_eq!(status & 0b1000_0000, 0);
-    }
-
-    #[test]
-    fn test_0xaa_tax_move_a_to_x() {
-        let bus = Box::new(Memory::new());
-        let mut cpu = CPU::new(bus);
-        cpu.load_and_run(vec![0xaa, 0x00]);
-
-        assert_eq!(cpu.register.x, cpu.register.y)
-    }
-
-    #[test]
-    fn test_5_ops_working_together() {
-        let bus = Box::new(Memory::new());
-        let mut cpu = CPU::new(bus);
-        cpu.load_and_run(vec![0xa9, 0xc0, 0xaa, 0xe8, 0x00]);
-
-        assert_eq!(cpu.register.x, 0xc1)
-    }
-
-    #[test]
-    fn test_inx_overflow() {
-        let bus = Box::new(Memory::new());
-        let mut cpu = CPU::new(bus);
-        cpu.register.x = 0xff;
-        cpu.load_and_run(vec![0xe8, 0xe8, 0x00]);
-        assert_eq!(cpu.register.x, 2)
-    }
-
-    #[test]
-    fn test_lda_from_memory() {
-        let bus = Box::new(Memory::new());
-        let mut cpu = CPU::new(bus);
-        cpu.write(0x10, 0x55);
-
-        cpu.load_and_run(vec![0xa5, 0x10, 0x00]);
-
-        assert_eq!(cpu.register.a, 0x55);
-    }
-}
-
+/// 触发CPU外部中断
 impl CPU {
-    /// 触发CPU外部中断
+    /// 启动时或按下游戏机的RST按键时触发
     pub fn reset(&mut self) {
         self.register = Register::default();
         self.register.pc = self.read_u16(0xFFFC);
     }
+    /// CPU的irq引脚触发
     pub fn irq(&mut self) {}
 }
 
 impl CPU {
-    pub fn load_and_run(&mut self, program: Vec<u8>) {
-        self.load(program);
-        self.reset();
-        self.run();
-    }
-
-    pub fn load(&mut self, program: Vec<u8>) {
-        for i in 0..(program.len()) {
-            self.write(0x0600 + i as u16, program[i]);
-        }
-        self.write_u16(0xFFFC, 0x0600);
-    }
-    pub fn run(&mut self) {
-        self.run_with_callback(|_| {});
-    }
-
     pub fn run_with_callback<F: FnMut(&mut CPU)>(&mut self, mut callback: F) {
         while self.run_one_instruction() {
             callback(self);
