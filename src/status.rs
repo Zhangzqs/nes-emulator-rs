@@ -1,3 +1,5 @@
+use crate::flag::FlagRegister;
+
 /// # Status Register (P) http://wiki.nesdev.com/w/index.php/Status_flags
 ///
 ///  7 6 5 4 3 2 1 0
@@ -47,25 +49,6 @@ impl From<u8> for StatusFlagRegister {
         }
     }
 }
-
-#[test]
-fn test_status_from() {
-    let status = StatusFlagRegister::from(0b1101_0110);
-    assert!(
-        status
-            == StatusFlagRegister {
-                carry: false,
-                zero: true,
-                interrupt_disable: true,
-                decimal_mode: false,
-                break_command: true,
-                unused: false,
-                overflow: true,
-                negative: true
-            }
-    )
-}
-
 impl Into<u8> for StatusFlagRegister {
     fn into(self) -> u8 {
         let bit0 = self.carry as u8;
@@ -83,6 +66,37 @@ impl Into<u8> for StatusFlagRegister {
         }
         result
     }
+}
+
+impl FlagRegister for StatusFlagRegister {
+    fn update(&mut self, data: u8) {
+        self.carry = ((data >> 0) & 1) != 0;
+        self.zero = ((data >> 1) & 1) != 0;
+        self.interrupt_disable = ((data >> 2) & 1) != 0;
+        self.decimal_mode = ((data >> 3) & 1) != 0;
+        self.break_command = ((data >> 4) & 1) != 0;
+        self.unused = ((data >> 5) & 1) != 0;
+        self.overflow = ((data >> 6) & 1) != 0;
+        self.negative = ((data >> 7) & 1) != 0;
+    }
+}
+
+#[test]
+fn test_status_from() {
+    let status = StatusFlagRegister::from(0b1101_0110);
+    assert!(
+        status
+            == StatusFlagRegister {
+                carry: false,
+                zero: true,
+                interrupt_disable: true,
+                decimal_mode: false,
+                break_command: true,
+                unused: false,
+                overflow: true,
+                negative: true
+            }
+    )
 }
 
 #[test]
