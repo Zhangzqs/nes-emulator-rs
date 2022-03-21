@@ -1,11 +1,13 @@
 use crate::addressable::Addressable;
 
 pub struct Memory {
-    data: [u8; 0x10000],
+    data: Vec<u8>,
 }
 impl Memory {
-    pub fn new() -> Self {
-        Self { data: [0; 65536] }
+    pub fn new(max_address: u16) -> Self {
+        Self {
+            data: vec![0; max_address as usize],
+        }
     }
 }
 impl Addressable for Memory {
