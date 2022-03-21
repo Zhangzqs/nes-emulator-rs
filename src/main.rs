@@ -114,7 +114,7 @@ fn main() {
         .unwrap();
     let bytes: Vec<u8> = std::fs::read("snake.nes").unwrap();
     let rom = Box::new(Rom::new(&bytes).unwrap());
-    let memory = Box::new(Memory::new());
+    let memory = Box::new(Memory::new(0x1FFF));
     let bus = BusBuilder::new().ram(memory).rom(rom).build().unwrap();
     let mut cpu = CPU::new(Box::new(bus));
     cpu.reset();
