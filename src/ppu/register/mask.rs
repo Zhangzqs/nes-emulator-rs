@@ -77,6 +77,9 @@ impl FlagRegister for MaskRegister {
 }
 
 impl MaskRegister {
+    pub fn new() -> Self {
+        MaskRegister::from(0)
+    }
     pub fn emphasise(&self) -> Vec<Color> {
         let mut result = Vec::<Color>::new();
         if self.emphasise_red {
