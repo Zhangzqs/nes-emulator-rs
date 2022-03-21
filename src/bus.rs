@@ -39,17 +39,26 @@ use crate::addressable::Addressable;
 // $C000-$FFFF 卡带的上层ROM
 pub struct Bus {
     ram: Box<dyn Addressable>,
+    rom: Box<dyn Addressable>,
 }
 
 pub struct BusBuilder {
     ram: Option<Box<dyn Addressable>>,
+    rom: Option<Box<dyn Addressable>>,
 }
 impl BusBuilder {
     pub fn new() -> Self {
-        Self { ram: None }
+        Self {
+            ram: None,
+            rom: None,
+        }
     }
     pub fn ram(mut self, ram: Box<dyn Addressable>) -> Self {
         self.ram = Some(ram);
+        self
+    }
+    pub fn rom(mut self, rom: Box<dyn Addressable>) -> Self {
+        self.rom = Some(rom);
         self
     }
     pub fn build(self) -> Result<Bus, String> {
@@ -57,47 +66,53 @@ impl BusBuilder {
             return Err("No ram".to_string());
         }
 
+        if let None = self.rom {
+            return Err("No rom".to_string());
+        }
         let ram = self.ram.unwrap();
-        Ok(Bus { ram })
+        let rom = self.rom.unwrap();
+        Ok(Bus { ram, rom })
     }
 }
 
-const RAM: u16 = 0x0000;
-const RAM_MIRRORS_END: u16 = 0x1FFF;
-const PPU_REGISTERS: u16 = 0x2000;
-const PPU_REGISTERS_MIRRORS_END: u16 = 0x3FFF;
+enum Device {
+    Ram(u16),
+    Rom(u16),
+    Unknown,
+}
+
+fn address_translation(addr: u16) -> Device {
+    match addr {
+        0x0000..=0x1FFF => {
+            let mirror_down_addr = addr & 0b00000111_11111111;
+            Device::Ram(mirror_down_addr)
+        }
+        0x2000..=0x3FFF => {
+            let _mirror_down_addr = addr & 0b00100000_00000111;
+            todo!("PPU is not supported yet")
+        }
+        0x8000..=0xFFFF => Device::Rom(addr - 0x8000),
+        _ => {
+            println!("Ignoring mem access at 0x{:04X}", addr);
+            Device::Unknown
+        }
+    }
+}
 
 impl Addressable for Bus {
     fn read(&self, addr: u16) -> u8 {
-        match addr {
-            RAM..=RAM_MIRRORS_END => {
-                let mirror_down_addr = addr & 0b00000111_11111111;
-                self.ram.read(mirror_down_addr)
-            }
-            PPU_REGISTERS..=PPU_REGISTERS_MIRRORS_END => {
-                let _mirror_down_addr = addr & 0b00100000_00000111;
-                todo!("PPU is not supported yet")
-            }
-            _ => {
-                println!("Ignoring mem access at {}", addr);
-                0
-            }
+        match address_translation(addr) {
+            Device::Ram(addr) => self.ram.read(addr),
+            Device::Rom(addr) => self.rom.read(addr),
+            Device::Unknown => todo!(),
         }
     }
 
     fn write(&mut self, addr: u16, data: u8) {
-        match addr {
-            RAM..=RAM_MIRRORS_END => {
-                let mirror_down_addr = addr & 0b11111111111;
-                self.ram.write(mirror_down_addr, data)
-            }
-            PPU_REGISTERS..=PPU_REGISTERS_MIRRORS_END => {
-                let _mirror_down_addr = addr & 0b00100000_00000111;
-                todo!("PPU is not supported yet");
-            }
-            _ => {
-                println!("Ignoring mem write-access at {}", addr);
-            }
+        match address_translation(addr) {
+            Device::Ram(addr) => self.ram.write(addr, data),
+            Device::Rom(addr) => self.rom.write(addr, data),
+            Device::Unknown => todo!(),
         }
     }
 }

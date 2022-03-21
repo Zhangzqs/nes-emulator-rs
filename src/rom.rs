@@ -1,10 +1,10 @@
+use crate::addressable::Addressable;
+
 #[derive(Debug, PartialEq)]
 pub enum Mirror {
     Vertical,
     Horizontal,
     FourScreen,
-    SingleScreenLowerBank,
-    SingleScreenUpperBank,
 }
 pub struct Rom {
     pub prg_rom: Vec<u8>,
@@ -12,6 +12,20 @@ pub struct Rom {
     pub mapper: u8,
     pub mirror: Mirror,
     pub has_battery_backed: bool,
+}
+
+impl Addressable for Rom {
+    fn read(&self, mut addr: u16) -> u8 {
+        if self.prg_rom.len() == 0x4000 && addr >= 0x4000 {
+            addr = addr % 0x4000;
+        }
+        let data = self.prg_rom[addr as usize];
+        data
+    }
+
+    fn write(&mut self, addr: u16, data: u8) {
+        println!("Rom is a read-only device")
+    }
 }
 
 const PRG_ROM_PAGE_SIZE: usize = 0x4000;
