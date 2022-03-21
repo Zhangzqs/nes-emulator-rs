@@ -1,11 +1,5 @@
-use crate::addressable::Addressable;
+use crate::{addressable::Addressable, meta::Mirror};
 
-#[derive(Debug, PartialEq)]
-pub enum Mirror {
-    Vertical,
-    Horizontal,
-    FourScreen,
-}
 pub struct Rom {
     pub prg_rom: Vec<u8>,
     pub chr_rom: Vec<u8>,
