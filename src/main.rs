@@ -2,6 +2,7 @@ extern crate core;
 
 use crate::bus::Bus;
 use bus::BusBuilder;
+use ppu::Ppu;
 use rand::Rng;
 use rom::Rom;
 use sdl2::event::Event;
@@ -114,8 +115,18 @@ fn main() {
         .unwrap();
     let bytes: Vec<u8> = std::fs::read("snake.nes").unwrap();
     let rom = Box::new(Rom::new(&bytes).unwrap());
-    let memory = Box::new(Memory::new(0x1FFF));
-    let bus = BusBuilder::new().ram(memory).rom(rom).build().unwrap();
+    let memory = Box::new(Memory::new(0xFFFF));
+
+    let chr_rom = rom.chr_rom.clone();
+    let mirror = rom.mirror.clone();
+    let ppu = Box::new(Ppu::new(chr_rom, mirror));
+
+    let bus = BusBuilder::new()
+        .ram(memory)
+        .rom(rom)
+        .ppu(ppu)
+        .build()
+        .unwrap();
     let mut cpu = CPU::new(Box::new(bus));
     cpu.reset();
 
