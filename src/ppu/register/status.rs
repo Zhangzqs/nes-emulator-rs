@@ -1,5 +1,5 @@
-use crate::{flag::FlagRegister, status::StatusFlagRegister};
-
+use crate::flag::FlagRegister;
+#[derive(Debug, Clone)]
 pub struct StatusRegister {
     pub unused_1: bool,
     pub unused_2: bool,
@@ -58,9 +58,9 @@ impl FlagRegister for StatusRegister {
     }
 }
 
-impl StatusFlagRegister {
+impl StatusRegister {
     pub fn new() -> Self {
-        StatusFlagRegister::from(0)
+        StatusRegister::from(0)
     }
 
     pub fn snapshot(&self) -> u8 {
