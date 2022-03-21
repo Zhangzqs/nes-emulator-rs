@@ -1,4 +1,9 @@
-use crate::{addressable::Addressable, memory::Memory};
+use std::cell::RefCell;
+
+use crate::{
+    addressable::{Addressable, MutableAddressable},
+    memory::Memory,
+};
 
 //  _______________ $10000  _______________
 // | PRG-ROM       |       |               |
@@ -40,14 +45,14 @@ use crate::{addressable::Addressable, memory::Memory};
 pub struct Bus {
     ram: Box<dyn Addressable>,
     rom: Box<dyn Addressable>,
-    ppu: Box<dyn Addressable>,
+    ppu: RefCell<Box<dyn MutableAddressable>>,
     sram: Box<dyn Addressable>,
 }
 
 pub struct BusBuilder {
     ram: Option<Box<dyn Addressable>>,
     rom: Option<Box<dyn Addressable>>,
-    ppu: Option<Box<dyn Addressable>>,
+    ppu: Option<Box<dyn MutableAddressable>>,
     sram: Option<Box<dyn Addressable>>,
 }
 impl BusBuilder {
@@ -67,7 +72,7 @@ impl BusBuilder {
         self.rom = Some(rom);
         self
     }
-    pub fn ppu(mut self, ppu: Box<dyn Addressable>) -> Self {
+    pub fn ppu(mut self, ppu: Box<dyn MutableAddressable>) -> Self {
         self.ppu = Some(ppu);
         self
     }
@@ -98,7 +103,7 @@ impl BusBuilder {
         Ok(Bus {
             ram,
             rom,
-            ppu,
+            ppu: RefCell::new(ppu),
             sram,
         })
     }
@@ -117,6 +122,7 @@ fn address_translation(addr: u16) -> Device {
         0x0000..=0x1FFF => Device::Ram((addr - 0x0000) & 0x07FF),
         0x2000..=0x3FFF => Device::Ppu((addr - 0x2000) & 0x0007),
         0x4000..=0x401F | 0x4020..=0x5FFF => {
+            // 暂未实现的设备
             println!("Ignoring mem access at 0x{:04X}", addr);
             Device::Unknown
         }
@@ -130,7 +136,7 @@ impl Addressable for Bus {
         match address_translation(addr) {
             Device::Ram(addr) => self.ram.read(addr),
             Device::Rom(addr) => self.rom.read(addr),
-            Device::Ppu(addr) => self.ppu.read(addr),
+            Device::Ppu(addr) => self.ppu.borrow_mut().read(addr),
             Device::Sram(addr) => self.sram.read(addr),
             Device::Unknown => todo!(),
         }
@@ -140,7 +146,7 @@ impl Addressable for Bus {
         match address_translation(addr) {
             Device::Ram(addr) => self.ram.write(addr, data),
             Device::Rom(addr) => self.rom.write(addr, data),
-            Device::Ppu(addr) => self.ppu.write(addr, data),
+            Device::Ppu(addr) => self.ppu.borrow_mut().write(addr, data),
             Device::Sram(addr) => self.sram.write(addr, data),
             Device::Unknown => todo!(),
         }
