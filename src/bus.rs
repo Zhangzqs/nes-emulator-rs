@@ -1,4 +1,4 @@
-use crate::addressable::Addressable;
+use crate::{addressable::Addressable, memory::Memory};
 
 //  _______________ $10000  _______________
 // | PRG-ROM       |       |               |
@@ -41,12 +41,14 @@ pub struct Bus {
     ram: Box<dyn Addressable>,
     rom: Box<dyn Addressable>,
     ppu: Box<dyn Addressable>,
+    sram: Box<dyn Addressable>,
 }
 
 pub struct BusBuilder {
     ram: Option<Box<dyn Addressable>>,
     rom: Option<Box<dyn Addressable>>,
     ppu: Option<Box<dyn Addressable>>,
+    sram: Option<Box<dyn Addressable>>,
 }
 impl BusBuilder {
     pub fn new() -> Self {
@@ -54,6 +56,7 @@ impl BusBuilder {
             ram: None,
             rom: None,
             ppu: None,
+            sram: None,
         }
     }
     pub fn ram(mut self, ram: Box<dyn Addressable>) -> Self {
@@ -68,7 +71,11 @@ impl BusBuilder {
         self.ppu = Some(ppu);
         self
     }
-    pub fn build(self) -> Result<Bus, String> {
+    pub fn sram(mut self, sram: Box<dyn Addressable>) -> Self {
+        self.sram = Some(sram);
+        self
+    }
+    pub fn build(mut self) -> Result<Bus, String> {
         if let None = self.ram {
             return Err("No ram".to_string());
         }
@@ -80,10 +87,20 @@ impl BusBuilder {
         if let None = self.ppu {
             return Err("No ppu".to_string());
         }
+
+        if let None = self.sram {
+            self.sram = Some(Box::new(Memory::new(0x1FFF)))
+        }
         let ram = self.ram.unwrap();
         let rom = self.rom.unwrap();
         let ppu = self.ppu.unwrap();
-        Ok(Bus { ram, rom, ppu })
+        let sram = self.sram.unwrap();
+        Ok(Bus {
+            ram,
+            rom,
+            ppu,
+            sram,
+        })
     }
 }
 
@@ -91,6 +108,7 @@ enum Device {
     Ram(u16),
     Rom(u16),
     Ppu(u16),
+    Sram(u16),
     Unknown,
 }
 
@@ -104,6 +122,7 @@ fn address_translation(addr: u16) -> Device {
             let mirror_down_addr = addr & 0b00100000_00000111;
             Device::Ppu(mirror_down_addr - 0x2000)
         }
+        0x6000..=0x7FFF => Device::Sram(addr - 6000),
         0x8000..=0xFFFF => Device::Rom(addr - 0x8000),
         _ => {
             println!("Ignoring mem access at 0x{:04X}", addr);
@@ -118,6 +137,7 @@ impl Addressable for Bus {
             Device::Ram(addr) => self.ram.read(addr),
             Device::Rom(addr) => self.rom.read(addr),
             Device::Ppu(addr) => self.ppu.read(addr),
+            Device::Sram(addr) => self.sram.read(addr),
             Device::Unknown => todo!(),
         }
     }
@@ -127,6 +147,7 @@ impl Addressable for Bus {
             Device::Ram(addr) => self.ram.write(addr, data),
             Device::Rom(addr) => self.rom.write(addr, data),
             Device::Ppu(addr) => self.ppu.write(addr, data),
+            Device::Sram(addr) => self.sram.write(addr, data),
             Device::Unknown => todo!(),
         }
     }
