@@ -132,8 +132,4 @@ impl ControlRegister {
     pub fn generate_vblank_nmi(&self) -> bool {
         self.generate_vblank_nmi
     }
-
-    pub fn update(mut self, data: u8) {
-        self = ControlRegister::from(data);
-    }
 }
