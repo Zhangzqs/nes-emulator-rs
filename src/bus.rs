@@ -114,20 +114,14 @@ enum Device {
 
 fn address_translation(addr: u16) -> Device {
     match addr {
-        0x0000..=0x1FFF => {
-            let mirror_down_addr = addr & 0x07FF;
-            Device::Ram(mirror_down_addr - 0x0000)
-        }
-        0x2000..=0x3FFF => {
-            let mirror_down_addr = addr & 0x2007;
-            Device::Ppu(mirror_down_addr - 0x2000)
-        }
-        0x6000..=0x7FFF => Device::Sram(addr - 0x6000),
-        0x8000..=0xFFFF => Device::Rom(addr - 0x8000),
+        0x0000..=0x1FFF => Device::Ram((addr - 0x0000) & 0x07FF),
+        0x2000..=0x3FFF => Device::Ppu((addr - 0x2000) & 0x0007),
         0x4000..=0x401F | 0x4020..=0x5FFF => {
             println!("Ignoring mem access at 0x{:04X}", addr);
             Device::Unknown
         }
+        0x6000..=0x7FFF => Device::Sram(addr - 0x6000),
+        0x8000..=0xFFFF => Device::Rom(addr - 0x8000),
     }
 }
 
