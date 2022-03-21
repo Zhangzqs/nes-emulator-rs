@@ -58,9 +58,9 @@ impl CPU {
         let old_pc = self.register.pc;
         let opcode =
             get_opcode_by_code(code).expect(&format!("OpCode {:x} is not recognized", code));
-
+        let mode = &opcode.mode;
         match code {
-            0xa9 | 0xa5 | 0xb5 | 0xad | 0xbd | 0xb9 | 0xa1 | 0xb1 => self.lda(&opcode.mode),
+            0xa9 | 0xa5 | 0xb5 | 0xad | 0xbd | 0xb9 | 0xa1 | 0xb1 => self.lda(mode),
             0xAA => self.tax(),
             0xa8 => self.tay(),
             0xba => self.tsx(),
@@ -79,27 +79,27 @@ impl CPU {
             0x68 => self.pla(),
             0x08 => self.php(),
             0x28 => self.plp(),
-            0x69 | 0x65 | 0x75 | 0x6d | 0x7d | 0x79 | 0x61 | 0x71 => self.adc(&opcode.mode),
-            0xe9 | 0xe5 | 0xf5 | 0xed | 0xfd | 0xf9 | 0xe1 | 0xf1 => self.sbc(&opcode.mode),
-            0x29 | 0x25 | 0x35 | 0x2d | 0x3d | 0x39 | 0x21 | 0x31 => self.and(&opcode.mode),
-            0x49 | 0x45 | 0x55 | 0x4d | 0x5d | 0x59 | 0x41 | 0x51 => self.eor(&opcode.mode),
-            0x09 | 0x05 | 0x15 | 0x0d | 0x1d | 0x19 | 0x01 | 0x11 => self.ora(&opcode.mode),
+            0x69 | 0x65 | 0x75 | 0x6d | 0x7d | 0x79 | 0x61 | 0x71 => self.adc(mode),
+            0xe9 | 0xe5 | 0xf5 | 0xed | 0xfd | 0xf9 | 0xe1 | 0xf1 => self.sbc(mode),
+            0x29 | 0x25 | 0x35 | 0x2d | 0x3d | 0x39 | 0x21 | 0x31 => self.and(mode),
+            0x49 | 0x45 | 0x55 | 0x4d | 0x5d | 0x59 | 0x41 | 0x51 => self.eor(mode),
+            0x09 | 0x05 | 0x15 | 0x0d | 0x1d | 0x19 | 0x01 | 0x11 => self.ora(mode),
             0x4a => self.lsr_reg_a(),
-            0x46 | 0x56 | 0x4e | 0x5e => self.lsr_memory(&opcode.mode),
+            0x46 | 0x56 | 0x4e | 0x5e => self.lsr_memory(mode),
             0x0a => self.asl_reg_a(),
-            0x06 | 0x16 | 0x0e | 0x1e => self.asl_memory(&opcode.mode),
+            0x06 | 0x16 | 0x0e | 0x1e => self.asl_memory(mode),
             0x2a => self.rol_reg_a(),
-            0x26 | 0x36 | 0x2e | 0x3e => self.rol_memory(&opcode.mode),
+            0x26 | 0x36 | 0x2e | 0x3e => self.rol_memory(mode),
             0x6a => self.ror_reg_a(),
-            0x66 | 0x76 | 0x6e | 0x7e => self.ror_memory(&opcode.mode),
-            0xe6 | 0xf6 | 0xee | 0xfe => self.inc(&opcode.mode),
+            0x66 | 0x76 | 0x6e | 0x7e => self.ror_memory(mode),
+            0xe6 | 0xf6 | 0xee | 0xfe => self.inc(mode),
             0xc8 => self.iny(),
-            0xc6 | 0xd6 | 0xce | 0xde => self.dec(&opcode.mode),
+            0xc6 | 0xd6 | 0xce | 0xde => self.dec(mode),
             0xca => self.dex(),
             0x88 => self.dey(),
-            0xc9 | 0xc5 | 0xd5 | 0xcd | 0xdd | 0xd9 | 0xc1 | 0xd1 => self.cmp(&opcode.mode),
-            0xc0 | 0xc4 | 0xcc => self.cpy(&opcode.mode),
-            0xe0 | 0xe4 | 0xec => self.cpx(&opcode.mode),
+            0xc9 | 0xc5 | 0xd5 | 0xcd | 0xdd | 0xd9 | 0xc1 | 0xd1 => self.cmp(mode),
+            0xc0 | 0xc4 | 0xcc => self.cpy(mode),
+            0xe0 | 0xe4 | 0xec => self.cpx(mode),
             0x4c => self.jmp_absolute(),
             0x6c => self.jmp_indirect(),
             0x20 => self.jsr(),
@@ -113,24 +113,206 @@ impl CPU {
             0xf0 => self.beq(),
             0xb0 => self.bcs(),
             0x90 => self.bcc(),
-            0x24 | 0x2c => self.bit(&opcode.mode),
-            0x85 | 0x95 | 0x8d | 0x9d | 0x99 | 0x81 | 0x91 => self.sta(&opcode.mode),
-            0x86 | 0x96 | 0x8e => self.stx(&opcode.mode),
-            0x84 | 0x94 | 0x8c => self.sty(&opcode.mode),
-            0xa2 | 0xa6 | 0xb6 | 0xae | 0xbe => self.ldx(&opcode.mode),
-            0xa0 | 0xa4 | 0xb4 | 0xac | 0xbc => self.ldy(&opcode.mode),
-            0xea => {}
-
+            0x24 | 0x2c => self.bit(mode),
+            0x85 | 0x95 | 0x8d | 0x9d | 0x99 | 0x81 | 0x91 => self.sta(mode),
+            0x86 | 0x96 | 0x8e => self.stx(mode),
+            0x84 | 0x94 | 0x8c => self.sty(mode),
+            0xa2 | 0xa6 | 0xb6 | 0xae | 0xbe => self.ldx(mode),
+            0xa0 | 0xa4 | 0xb4 | 0xac | 0xbc => self.ldy(mode),
+            0xea => {} // NOP
             0x00 => return false,
-            _ => {
-                panic!("Unsupported code: {}", code)
+
+            /* unofficial */
+            0xc7 | 0xd7 | 0xCF | 0xdF | 0xdb | 0xd3 | 0xc3 => self.dcp(mode),
+            0x27 | 0x37 | 0x2F | 0x3F | 0x3b | 0x33 | 0x23 => self.rla(mode),
+            0x07 | 0x17 | 0x0F | 0x1f | 0x1b | 0x03 | 0x13 => self.slo(mode),
+            0x47 | 0x57 | 0x4F | 0x5f | 0x5b | 0x43 | 0x53 => self.sre(mode),
+            0x80 | 0x82 | 0x89 | 0xc2 | 0xe2 => self.skb(mode),
+            0xCB => self.axs(mode),
+            0x6B => self.arr(mode),
+            0xeb => self.unofficial_sbc(mode),
+            0x0b | 0x2b => self.anc(mode),
+            0x4b => self.alr(mode),
+            0x04 | 0x44 | 0x64 | 0x14 | 0x34 | 0x54 | 0x74 | 0xd4 | 0xf4 | 0x0c | 0x1c | 0x3c
+            | 0x5c | 0x7c | 0xdc | 0xfc => self.nop_read(mode),
+            0x67 | 0x77 | 0x6f | 0x7f | 0x7b | 0x63 | 0x73 => self.rra(mode),
+            0xe7 | 0xf7 | 0xef | 0xff | 0xfb | 0xe3 | 0xf3 => self.lsb(mode),
+            0x02 | 0x12 | 0x22 | 0x32 | 0x42 | 0x52 | 0x62 | 0x72 | 0x92 | 0xb2 | 0xd2 | 0xf2 => {
+                self.unofficial_nop(mode)
             }
+            0x1a | 0x3a | 0x5a | 0x7a | 0xda | 0xfa => self.unofficial_nop(mode),
+            0xa7 | 0xb7 | 0xaf | 0xbf | 0xa3 | 0xb3 => self.lax(mode),
+            0x87 | 0x97 | 0x8f | 0x83 => self.sax(mode),
+            0xab => self.lxa(mode),
+            0x8b => self.xaa(mode),
+            0xbb => self.las(mode),
+            0x9b => self.tas(mode),
+            0x93 => self.ahx_indirect_y(mode),
+            0x9f => self.ahx_absolute_y(mode),
+            0x9e => self.shx(mode),
+            0x9c => self.shy(mode),
         }
         // 没有执行跳转指令
         if old_pc == self.register.pc {
             self.register.pc += (opcode.length - 1) as u16;
         }
         true
+    }
+}
+
+/// 非官方指令
+impl CPU {
+    fn dcp(&mut self, mode: &AddressingMode) {
+        let addr = self.get_operand_address(mode);
+        let mut data = self.read(addr);
+        data = data.wrapping_sub(1);
+        self.write(addr, data);
+        // self._update_zero_and_negative_flags(data);
+        if data <= self.register.a {
+            self.register.status.carry = true;
+        }
+
+        self.update_zero_and_negative_flags(self.register.a.wrapping_sub(data));
+    }
+    fn rla(&mut self, mode: &AddressingMode) {
+        self.rol_memory(mode);
+        let data = self.get_operand(mode);
+        self.and_with_register_a(data);
+    }
+    fn slo(&mut self, mode: &AddressingMode) {
+        self.rol_memory(mode);
+        let data = self.get_operand(mode);
+        self.or_with_register_a(data);
+    }
+    fn sre(&mut self, mode: &AddressingMode) {
+        self.rol_memory(mode);
+        let data = self.get_operand(mode);
+        self.xor_with_register_a(data);
+    }
+    fn skb(&mut self, mode: &AddressingMode) {
+
+        /* 2 byte NOP (immidiate ) */
+        // todo: might be worth doing the read
+    }
+    fn axs(&mut self, mode: &AddressingMode) {
+        let addr = self.get_operand_address(mode);
+        let data = self.read(addr);
+        let x_and_a = self.register.x & self.register.a;
+        let result = x_and_a.wrapping_sub(data);
+
+        if data <= x_and_a {
+            self.register.status.carry = true;
+        }
+        self.update_zero_and_negative_flags(result);
+
+        self.register.x = result;
+    }
+    fn arr(&mut self, mode: &AddressingMode) {
+        let data = self.get_operand(mode);
+        self.and_with_register_a(data);
+        self.ror_reg_a();
+        //todo: registers
+        let result = self.register.a;
+        let bit_5 = (result >> 5) & 1;
+        let bit_6 = (result >> 6) & 1;
+        self.register.status.carry = bit_6 == 1;
+        self.register.status.overflow = bit_5 ^ bit_6 == 1;
+
+        self.update_zero_and_negative_flags(result);
+    }
+    fn unofficial_sbc(&mut self, mode: &AddressingMode) {
+        let data = self.get_operand(mode);
+        self.sub_from_register_a(data);
+    }
+
+    fn anc(&mut self, mode: &AddressingMode) {
+        let data = self.get_operand(mode);
+        self.and_with_register_a(data);
+        self.register.status.carry = self.register.status.negative;
+    }
+    fn alr(&mut self, mode: &AddressingMode) {
+        let data = self.get_operand(mode);
+        self.and_with_register_a(data);
+        self.lsr_reg_a();
+    }
+    fn nop_read(&mut self, mode: &AddressingMode) {
+        let data = self.get_operand(mode);
+        /* do nothing */
+    }
+    fn rra(&mut self, mode: &AddressingMode) {
+        self.ror_memory(mode);
+        let data = self.get_operand(mode);
+        self.add_to_reg_a(data);
+    }
+    fn lsb(&mut self, mode: &AddressingMode) {
+        self.inc(mode);
+        let data = self.get_operand(mode);
+        self.sub_from_register_a(data);
+    }
+    fn unofficial_nop(&mut self, mode: &AddressingMode) {}
+    fn lax(&mut self, mode: &AddressingMode) {
+        let data = self.get_operand(mode);
+        self.set_register_a(data);
+        self.register.x = self.register.a;
+    }
+    fn sax(&mut self, mode: &AddressingMode) {
+        let data = self.register.a & self.register.x;
+        let addr = self.get_operand_address(mode);
+        self.write(addr, data);
+    }
+    fn lxa(&mut self, mode: &AddressingMode) {
+        self.lda(mode);
+        self.tax();
+    }
+    fn xaa(&mut self, mode: &AddressingMode) {
+        self.register.a = self.register.x;
+        self.update_zero_and_negative_flags(self.register.a);
+        let addr = self.get_operand_address(mode);
+        let data = self.read(addr);
+        self.and_with_register_a(data);
+    }
+    fn las(&mut self, mode: &AddressingMode) {
+        let addr = self.get_operand_address(mode);
+        let mut data = self.read(addr);
+        data = data & self.register.sp;
+        self.register.a = data;
+        self.register.x = data;
+        self.register.sp = data;
+        self.update_zero_and_negative_flags(data);
+    }
+    fn tas(&mut self, mode: &AddressingMode) {
+        let data = self.register.a & self.register.x;
+        self.register.sp = data;
+        let mem_address = self.read_u16(self.register.pc) + self.register.y as u16;
+
+        let data = ((mem_address >> 8) as u8 + 1) & self.register.sp;
+        self.write(mem_address, data)
+    }
+    fn ahx_indirect_y(&mut self, mode: &AddressingMode) {
+        let pos: u8 = self.read(self.register.pc);
+        let mem_address = self.read_u16(pos as u16) + self.register.y as u16;
+        let data = self.register.a & self.register.x & (mem_address >> 8) as u8;
+        self.write(mem_address, data)
+    }
+    fn ahx_absolute_y(&mut self, mode: &AddressingMode) {
+        let mem_address = self.read_u16(self.register.pc) + self.register.y as u16;
+
+        let data = self.register.a & self.register.x & (mem_address >> 8) as u8;
+        self.write(mem_address, data)
+    }
+    fn shx(&mut self, mode: &AddressingMode) {
+        let mem_address = self.read_u16(self.register.pc) + self.register.y as u16;
+
+        // todo if cross page boundry {
+        //     mem_address &= (self.x as u16) << 8;
+        // }
+        let data = self.register.x & ((mem_address >> 8) as u8 + 1);
+        self.write(mem_address, data)
+    }
+    fn shy(&mut self, mode: &AddressingMode) {
+        let mem_address = self.read_u16(self.register.pc) + self.register.x as u16;
+        let data = self.register.y & ((mem_address >> 8) as u8 + 1);
+        self.write(mem_address, data)
     }
 }
 
@@ -262,6 +444,23 @@ impl CPU {
         self.register.a = value;
         self.update_zero_and_negative_flags(self.register.a);
     }
+
+    fn sub_from_register_a(&mut self, data: u8) {
+        self.add_to_reg_a(((data as i8).wrapping_neg().wrapping_sub(1)) as u8);
+    }
+    /// 向累加器A添加一个数
+    fn add_to_reg_a(&mut self, data: u8) {
+        let a = self.register.a as u16;
+        let data = data as u16;
+        let carry = self.register.status.carry as u16;
+        let sum = a + data + carry;
+
+        self.update_carry_flag(sum);
+        let result = sum as u8;
+        let data = data as u8;
+        self.register.status.overflow = (data ^ result) & (result ^ self.register.a) & 0x80 != 0;
+        self.set_register_a(result);
+    }
 }
 
 /// 数据传送指令实现
@@ -347,19 +546,6 @@ impl CPU {
 
 /// 算术运算指令实现
 impl CPU {
-    /// 向累加器A添加一个数
-    fn add_to_reg_a(&mut self, data: u8) {
-        let a = self.register.a as u16;
-        let data = data as u16;
-        let carry = self.register.status.carry as u16;
-        let sum = a + data + carry;
-
-        self.update_carry_flag(sum);
-        let result = sum as u8;
-        let data = data as u8;
-        self.register.status.overflow = (data ^ result) & (result ^ self.register.a) & 0x80 != 0;
-        self.set_register_a(result);
-    }
     /// ADC--累加器,存储器,进位标志C相加,结果送累加器A  A+M+C→A
     fn adc(&mut self, mode: &AddressingMode) {
         let val = self.get_operand(mode);
@@ -415,22 +601,36 @@ impl CPU {
     }
 }
 
+impl CPU {
+    fn and_with_register_a(&mut self, data: u8) {
+        self.set_register_a(data & self.register.a);
+    }
+
+    fn xor_with_register_a(&mut self, data: u8) {
+        self.set_register_a(data ^ self.register.a);
+    }
+
+    fn or_with_register_a(&mut self, data: u8) {
+        self.set_register_a(data | self.register.a);
+    }
+}
+
 /// 逻辑运算指令实现
 impl CPU {
     /// AND--寄存器与累加器相与,结果送累加器  A∧M→A
     fn and(&mut self, mode: &AddressingMode) {
         let data = self.get_operand(mode);
-        self.set_register_a(data & self.register.a);
+        self.and_with_register_a(data);
     }
     /// ORA--寄存器与累加器相或,结果送累加器  A∨M→A
     fn ora(&mut self, mode: &AddressingMode) {
         let data = self.get_operand(mode);
-        self.set_register_a(data | self.register.a);
+        self.or_with_register_a(data);
     }
     /// EOR--寄存器与累加器相异或,结果送累加器  A≮M→A
     fn eor(&mut self, mode: &AddressingMode) {
         let data = self.get_operand(mode);
-        self.set_register_a(data ^ self.register.a);
+        self.xor_with_register_a(data);
     }
 }
 
