@@ -21,11 +21,9 @@ mod flag;
 mod mapper;
 mod memory;
 mod meta;
-mod opcode;
 mod ppu;
-mod register;
+
 mod rom;
-mod status;
 
 fn color(byte: u8) -> Color {
     match byte {

@@ -1,4 +1,4 @@
-use crate::status::StatusFlagRegister;
+use super::status::StatusFlagRegister;
 
 pub struct Register {
     /// 寄存器A

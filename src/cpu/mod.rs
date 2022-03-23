@@ -1,6 +1,10 @@
+mod opcode;
+mod register;
+mod status;
+
 use crate::addressable::Addressable;
-use crate::register::Register;
-use crate::status::StatusFlagRegister;
+use register::Register;
+use status::StatusFlagRegister;
 
 #[derive(Debug, Copy, Clone)]
 pub enum AddressingMode {
@@ -52,7 +56,7 @@ impl CPU {
 
     /// 返回值为false表示程序结束
     fn run_one_instruction(&mut self) -> bool {
-        use crate::opcode::get_opcode_by_code;
+        use opcode::get_opcode_by_code;
         let code = self.read(self.register.pc);
         self.register.pc += 1;
         let old_pc = self.register.pc;
