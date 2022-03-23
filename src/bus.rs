@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 
 use crate::{
-    addressable::{Addressable, MutableAddressable},
+    addressable::{Addressable, AddressableMut, Readable, Writable},
     memory::Memory,
 };
 
@@ -45,15 +45,21 @@ use crate::{
 pub struct Bus {
     ram: Box<dyn Addressable>,
     rom: Box<dyn Addressable>,
-    ppu: RefCell<Box<dyn MutableAddressable>>,
+    ppu: RefCell<Box<dyn AddressableMut>>,
     sram: Box<dyn Addressable>,
+    apu: Box<dyn Addressable>,
+    joypad_p1: Option<Box<dyn Addressable>>,
+    joypad_p2: Option<Box<dyn Addressable>>,
 }
 
 pub struct BusBuilder {
     ram: Option<Box<dyn Addressable>>,
     rom: Option<Box<dyn Addressable>>,
-    ppu: Option<Box<dyn MutableAddressable>>,
+    ppu: Option<Box<dyn AddressableMut>>,
     sram: Option<Box<dyn Addressable>>,
+    apu: Option<Box<dyn Addressable>>,
+    joypad_p1: Option<Box<dyn Addressable>>,
+    joypad_p2: Option<Box<dyn Addressable>>,
 }
 impl BusBuilder {
     pub fn new() -> Self {
@@ -62,6 +68,9 @@ impl BusBuilder {
             rom: None,
             ppu: None,
             sram: None,
+            apu: None,
+            joypad_p1: None,
+            joypad_p2: None,
         }
     }
     pub fn ram(mut self, ram: Box<dyn Addressable>) -> Self {
@@ -72,12 +81,16 @@ impl BusBuilder {
         self.rom = Some(rom);
         self
     }
-    pub fn ppu(mut self, ppu: Box<dyn MutableAddressable>) -> Self {
+    pub fn ppu(mut self, ppu: Box<dyn AddressableMut>) -> Self {
         self.ppu = Some(ppu);
         self
     }
     pub fn sram(mut self, sram: Box<dyn Addressable>) -> Self {
         self.sram = Some(sram);
+        self
+    }
+    pub fn apu(mut self, apu: Box<dyn Addressable>) -> Self {
+        self.apu = Some(apu);
         self
     }
     pub fn build(mut self) -> Result<Bus, String> {
@@ -93,18 +106,27 @@ impl BusBuilder {
             return Err("No ppu".to_string());
         }
 
+        if let None = self.apu {
+            return Err("No apu".to_string());
+        }
+
         if let None = self.sram {
             self.sram = Some(Box::new(Memory::new(0x1FFF)))
         }
+
         let ram = self.ram.unwrap();
         let rom = self.rom.unwrap();
         let ppu = self.ppu.unwrap();
         let sram = self.sram.unwrap();
+        let apu = self.apu.unwrap();
         Ok(Bus {
             ram,
             rom,
             ppu: RefCell::new(ppu),
             sram,
+            apu,
+            joypad_p1: self.joypad_p1,
+            joypad_p2: self.joypad_p2,
         })
     }
 }
@@ -114,6 +136,9 @@ enum Device {
     Rom(u16),
     Ppu(u16),
     Sram(u16),
+    Apu(u16),
+    JoypadP1(u16),
+    JoypadP2(u16),
     Unknown,
 }
 
@@ -121,7 +146,10 @@ fn address_translation(addr: u16) -> Device {
     match addr {
         0x0000..=0x1FFF => Device::Ram((addr - 0x0000) & 0x07FF),
         0x2000..=0x3FFF => Device::Ppu((addr - 0x2000) & 0x0007),
-        0x4000..=0x401F | 0x4020..=0x5FFF => {
+        0x4000..=0x4015 => Device::Apu(addr - 0x4000),
+        0x4016 => Device::JoypadP1(addr),
+        0x4017 => Device::JoypadP2(addr),
+        0x4018..=0x5FFF => {
             // 暂未实现的设备
             println!("Ignoring mem access at 0x{:04X}", addr);
             Device::Unknown
@@ -130,25 +158,41 @@ fn address_translation(addr: u16) -> Device {
         0x8000..=0xFFFF => Device::Rom(addr - 0x8000),
     }
 }
-
-impl Addressable for Bus {
+impl Readable for Bus {
     fn read(&self, addr: u16) -> u8 {
         match address_translation(addr) {
             Device::Ram(addr) => self.ram.read(addr),
             Device::Rom(addr) => self.rom.read(addr),
             Device::Ppu(addr) => self.ppu.borrow_mut().read(addr),
             Device::Sram(addr) => self.sram.read(addr),
-            Device::Unknown => todo!(),
+            Device::Apu(addr) => self.apu.read(addr),
+            Device::JoypadP1(addr) => self.joypad_p1.as_ref().map_or(0, |p| p.read(addr)),
+            Device::JoypadP2(addr) => self.joypad_p2.as_ref().map_or(0, |p| p.read(addr)),
+            Device::Unknown => 0,
         }
     }
+}
 
+impl Writable for Bus {
     fn write(&mut self, addr: u16, data: u8) {
         match address_translation(addr) {
             Device::Ram(addr) => self.ram.write(addr, data),
             Device::Rom(addr) => self.rom.write(addr, data),
             Device::Ppu(addr) => self.ppu.borrow_mut().write(addr, data),
             Device::Sram(addr) => self.sram.write(addr, data),
-            Device::Unknown => todo!(),
+            Device::Apu(addr) => self.apu.write(addr, data),
+            Device::JoypadP1(addr) => {
+                if let Some(joypad) = &mut self.joypad_p1 {
+                    joypad.write(addr, data);
+                }
+            }
+            Device::JoypadP2(addr) => {
+                if let Some(joypad) = &mut self.joypad_p2 {
+                    joypad.write(addr, data);
+                }
+            }
+            Device::Unknown => {}
         }
     }
 }
+impl Addressable for Bus {}

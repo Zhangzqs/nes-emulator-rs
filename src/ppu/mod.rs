@@ -1,8 +1,4 @@
-use crate::{
-    addressable::{Addressable, MutableAddressable},
-    flag::FlagRegister,
-    meta::Mirror,
-};
+use crate::{addressable::*, flag::FlagRegister, meta::Mirror};
 
 use self::register::PpuRegister;
 mod register;
@@ -168,7 +164,7 @@ impl Ppu {
 }
 
 /// cpu通过总线内存访问与ppu通信，共暴露8个字节的寄存器
-impl MutableAddressable for Ppu {
+impl ReadableMut for Ppu {
     fn read(&mut self, addr: u16) -> u8 {
         match addr {
             0 | 1 | 3 | 5 | 6 => {
@@ -181,7 +177,8 @@ impl MutableAddressable for Ppu {
             _ => panic!("Can't read ppu register: {}", addr),
         }
     }
-
+}
+impl Writable for Ppu {
     fn write(&mut self, addr: u16, data: u8) {
         match addr {
             0 => self.write_to_ctrl(data),
@@ -196,3 +193,5 @@ impl MutableAddressable for Ppu {
         }
     }
 }
+
+impl AddressableMut for Ppu {}

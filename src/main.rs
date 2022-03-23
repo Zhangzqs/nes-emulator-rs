@@ -23,6 +23,8 @@ mod memory;
 mod meta;
 mod ppu;
 
+mod apu;
+mod joypad;
 mod rom;
 
 fn color(byte: u8) -> Color {

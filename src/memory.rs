@@ -1,4 +1,4 @@
-use crate::addressable::Addressable;
+use crate::addressable::*;
 
 pub struct Memory {
     data: Vec<u8>,
@@ -10,12 +10,16 @@ impl Memory {
         }
     }
 }
-impl Addressable for Memory {
+
+impl Readable for Memory {
     fn read(&self, addr: u16) -> u8 {
         self.data[addr as usize]
     }
-
+}
+impl Writable for Memory {
     fn write(&mut self, addr: u16, data: u8) {
         self.data[addr as usize] = data;
     }
 }
+
+impl Addressable for Memory {}

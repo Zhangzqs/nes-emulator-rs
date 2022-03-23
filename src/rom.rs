@@ -1,4 +1,7 @@
-use crate::{addressable::Addressable, meta::Mirror};
+use crate::{
+    addressable::{Addressable, Readable, Writable},
+    meta::Mirror,
+};
 
 pub struct Rom {
     pub prg_rom: Vec<u8>,
@@ -8,7 +11,7 @@ pub struct Rom {
     pub has_battery_backed: bool,
 }
 
-impl Addressable for Rom {
+impl Readable for Rom {
     fn read(&self, mut addr: u16) -> u8 {
         if self.prg_rom.len() == 0x4000 && addr >= 0x4000 {
             addr = addr % 0x4000;
@@ -16,11 +19,15 @@ impl Addressable for Rom {
         let data = self.prg_rom[addr as usize];
         data
     }
+}
 
+impl Writable for Rom {
     fn write(&mut self, addr: u16, data: u8) {
         println!("Rom is a read-only device")
     }
 }
+
+impl Addressable for Rom {}
 
 const PRG_ROM_PAGE_SIZE: usize = 0x4000;
 const CHR_ROM_PAGE_SIZE: usize = 0x2000;
