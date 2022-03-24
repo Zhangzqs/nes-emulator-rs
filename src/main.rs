@@ -12,7 +12,6 @@ use sdl2::EventPump;
 
 use crate::cpu::CPU;
 use crate::memory::Memory;
-
 mod addressable;
 mod asm;
 mod bus;
