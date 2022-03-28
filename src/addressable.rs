@@ -21,16 +21,3 @@ pub trait Writable {
 }
 
 pub trait Addressable: Readable + Writable {}
-
-pub trait ReadableMut {
-    fn read(&mut self, addr: u16) -> u8 {
-        unimplemented!("unimplemented ReadableMut trait")
-    }
-    fn read_u16(&mut self, addr: u16) -> u16 {
-        let low = self.read(addr) as u16;
-        let high = self.read(addr + 1) as u16;
-        (high << 8) | low
-    }
-}
-
-pub trait AddressableMut: ReadableMut + Writable {}

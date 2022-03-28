@@ -1,3 +1,5 @@
+use std::cell::RefCell;
+
 use crate::{addressable::*, flag::FlagRegister, meta::Mirror};
 
 use self::register::PpuRegister;
@@ -17,8 +19,14 @@ pub struct Ppu {
 
     pub mirror: Mirror,
     /// 寄存器数据
-    pub register: PpuRegister,
-    internal_data_buffer: u8,
+    pub register: RefCell<PpuRegister>,
+
+    pub nmi_interrupt: Option<u8>,
+
+    internal_data_buffer: RefCell<u8>,
+
+    scanline: u16,
+    cycles: usize,
 }
 
 impl Ppu {
@@ -32,9 +40,12 @@ impl Ppu {
             vram: [0; 2048],
             oam_data: [0; 64 * 4],
             mirror,
-            register: PpuRegister::new(),
+            register: RefCell::new(PpuRegister::new()),
             oam_address: 0,
-            internal_data_buffer: 0,
+            internal_data_buffer: RefCell::new(0),
+            cycles: 0,
+            scanline: 0,
+            nmi_interrupt: None,
         }
     }
 }
@@ -60,26 +71,85 @@ impl Ppu {
         }
     }
 
-    fn increment_vram_addr(&mut self) {
-        self.register
-            .address
-            .increment(self.register.control.vram_address_increment());
+    fn increment_vram_addr(&self) {
+        let reg_ref = self.register.borrow();
+        let inc = reg_ref.control.vram_address_increment();
+        self.register.borrow_mut().address.increment(inc);
     }
 
+    pub fn tick(&mut self, cycles: u8) -> bool {
+        let mut reg_ref = self.register.borrow_mut();
+        self.cycles += cycles as usize;
+        if self.cycles >= 341 {
+            self.cycles = self.cycles - 341;
+            self.scanline += 1;
+
+            if self.scanline == 241 {
+                reg_ref.status.vblank_started = true;
+                reg_ref.status.sprite_zero_hit = false;
+
+                if reg_ref.control.generate_vblank_nmi() {
+                    self.nmi_interrupt = Some(1);
+                }
+            }
+
+            if self.scanline >= 262 {
+                self.scanline = 0;
+                self.nmi_interrupt = None;
+                // self.status.
+                reg_ref.status.sprite_zero_hit = false;
+                reg_ref.status.reset_vblank_status();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /// 轮询中断
+    fn poll_nmi_interrupt(&mut self) -> Option<u8> {
+        self.nmi_interrupt.take()
+    }
+}
+
+pub trait IPpu {
+    fn write_to_ctrl(&mut self, value: u8);
+    fn write_to_mask(&mut self, value: u8);
+    fn read_status(&self) -> u8;
+    fn write_to_oam_addr(&mut self, value: u8);
+    fn write_to_oam_data(&mut self, value: u8);
+    fn read_oam_data(&self) -> u8;
+    fn write_to_scroll(&mut self, value: u8);
+    fn write_to_ppu_addr(&mut self, value: u8);
+    fn write_to_data(&mut self, value: u8);
+    fn read_data(&self) -> u8;
+    fn write_oam_dma(&mut self, value: &[u8; 256]);
+}
+
+impl IPpu for Ppu {
     fn write_to_ctrl(&mut self, value: u8) {
-        let before_nmi_status = self.register.control.generate_vblank_nmi();
-        self.register.control.update(value);
+        let mut reg_ref = self.register.borrow_mut();
+
+        let before_nmi_status = reg_ref.control.generate_vblank_nmi();
+        reg_ref.control.update(value);
+        if !before_nmi_status
+            && reg_ref.control.generate_vblank_nmi()
+            && reg_ref.status.vblank_started
+        {
+            self.nmi_interrupt = Some(1);
+        }
     }
 
     fn write_to_mask(&mut self, value: u8) {
-        self.register.mask.update(value);
+        let mut reg_ref = self.register.borrow_mut();
+        reg_ref.mask.update(value);
     }
 
-    fn read_status(&mut self) -> u8 {
-        let data = self.register.status.snapshot();
-        self.register.status.reset_vblank_status();
-        self.register.address.reset_latch();
-        self.register.scroll.reset_latch();
+    fn read_status(&self) -> u8 {
+        let mut reg_ref = self.register.borrow_mut();
+        let data = reg_ref.status.snapshot();
+        reg_ref.status.reset_vblank_status();
+        reg_ref.address.reset_latch();
+        reg_ref.scroll.reset_latch();
         data
     }
 
@@ -97,15 +167,15 @@ impl Ppu {
     }
 
     fn write_to_scroll(&mut self, value: u8) {
-        self.register.scroll.write(value);
+        self.register.borrow_mut().scroll.write(value);
     }
 
     fn write_to_ppu_addr(&mut self, value: u8) {
-        self.register.address.update(value);
+        self.register.borrow_mut().address.update(value);
     }
 
     fn write_to_data(&mut self, value: u8) {
-        let addr = self.register.address.get();
+        let addr = self.register.borrow_mut().address.get();
         match addr {
             0..=0x1fff => println!("attempt to write to chr rom space {}", addr),
             0x2000..=0x2fff => {
@@ -126,20 +196,21 @@ impl Ppu {
         self.increment_vram_addr();
     }
 
-    fn read_data(&mut self) -> u8 {
-        let addr = self.register.address.get();
+    fn read_data(&self) -> u8 {
+        let addr = self.register.borrow().address.get();
 
         self.increment_vram_addr();
-
+        let mut internal_data_buffer_ref = self.internal_data_buffer.borrow_mut();
         match addr {
             0..=0x1fff => {
-                let result = self.internal_data_buffer;
-                self.internal_data_buffer = self.chr_rom[addr as usize];
+                let result = self.internal_data_buffer.borrow().clone();
+                self.internal_data_buffer.borrow_mut();
+                *internal_data_buffer_ref = self.chr_rom[addr as usize];
                 result
             }
             0x2000..=0x2fff => {
-                let result = self.internal_data_buffer;
-                self.internal_data_buffer = self.vram[self.mirror_vram_addr(addr) as usize];
+                let result = self.internal_data_buffer.borrow().clone();
+                *internal_data_buffer_ref = self.vram[self.mirror_vram_addr(addr) as usize];
                 result
             }
             0x3000..=0x3eff => unimplemented!("addr {} shouldn't be used in reallity", addr),
@@ -164,8 +235,8 @@ impl Ppu {
 }
 
 /// cpu通过总线内存访问与ppu通信，共暴露8个字节的寄存器
-impl ReadableMut for Ppu {
-    fn read(&mut self, addr: u16) -> u8 {
+impl Readable for Ppu {
+    fn read(&self, addr: u16) -> u8 {
         match addr {
             0 | 1 | 3 | 5 | 6 => {
                 panic!("Attempt to read from write-only PPU address {}", addr);
@@ -194,4 +265,4 @@ impl Writable for Ppu {
     }
 }
 
-impl AddressableMut for Ppu {}
+impl Addressable for Ppu {}

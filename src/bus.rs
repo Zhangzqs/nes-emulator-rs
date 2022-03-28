@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 
 use crate::{
-    addressable::{Addressable, AddressableMut, Readable, Writable},
+    addressable::{Addressable, Readable, Writable},
     memory::Memory,
 };
 
@@ -45,7 +45,7 @@ use crate::{
 pub struct Bus {
     ram: Box<dyn Addressable>,
     rom: Box<dyn Addressable>,
-    ppu: RefCell<Box<dyn AddressableMut>>,
+    ppu: RefCell<Box<dyn Addressable>>,
     sram: Box<dyn Addressable>,
     apu: Box<dyn Addressable>,
     joypad_p1: Option<Box<dyn Addressable>>,
@@ -55,7 +55,7 @@ pub struct Bus {
 pub struct BusBuilder {
     ram: Option<Box<dyn Addressable>>,
     rom: Option<Box<dyn Addressable>>,
-    ppu: Option<Box<dyn AddressableMut>>,
+    ppu: Option<Box<dyn Addressable>>,
     sram: Option<Box<dyn Addressable>>,
     apu: Option<Box<dyn Addressable>>,
     joypad_p1: Option<Box<dyn Addressable>>,
@@ -81,7 +81,7 @@ impl BusBuilder {
         self.rom = Some(rom);
         self
     }
-    pub fn ppu(mut self, ppu: Box<dyn AddressableMut>) -> Self {
+    pub fn ppu(mut self, ppu: Box<dyn Addressable>) -> Self {
         self.ppu = Some(ppu);
         self
     }
